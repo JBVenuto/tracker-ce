@@ -20,7 +20,8 @@ The **Polyend Tracker Custom Synth Engine SDK** ([`synth/include/PolySynth/sdk/`
 5. [Patch Metadata, Curves, Macros & UI Layout Reference](#5-patch-metadata-curves-macros--ui-layout-reference)
 6. [DSP Utilities & Value Formatters](#6-dsp-utilities--value-formatters)
 7. [Real-Time Audio, CPU & Memory Guidelines](#7-real-time-audio-cpu--memory-guidelines)
-8. [Reference Implementation: `CHIP` (`ChiptuneSynthVoice`)](#8-reference-implementation-chip-chiptunesynthvoice)
+8. [Genesis-Style 4-Operator FM: `GEN` (`GenesisSynthVoice`)](#8-genesis-style-4-operator-fm-gen-genesisynthvoice)
+9. [Reference Implementation: `CHIP` (`ChiptuneSynthVoice`)](#9-reference-implementation-chip-chiptunesynthvoice)
 
 ---
 
@@ -38,7 +39,7 @@ The Tracker synthesizer subsystem uses a hybrid architecture that combines preco
 │  ┌────────────▼──────────────────────────────────▼───────────────────┐  │
 │  │               core/synth/registry.cpp (Open Source)            │  │
 │  │   Registers Factory Engines (ACD, FAT, VAP, WTFM, PERC, DIRT)     │  │
-│  │   + Open-Source Custom Engines (CHIP, your custom engines...)     │  │
+│  │   + Open-Source Custom Engines (CHIP, GEN, your custom engines...)│  │
 │  └────────────┬──────────────────────────────────┬───────────────────┘  │
 └───────────────┼──────────────────────────────────┼──────────────────────┘
                 │                                  │
@@ -46,7 +47,8 @@ The Tracker synthesizer subsystem uses a hybrid architecture that combines preco
 │  Precompiled Factory Archives  │ │      Open-Source Synth Engines       │
 │  • libPolySynth.a (no registry)│ │  • synth/include/PolySynth/sdk/  │
 │  • libPolyDSP.a                │ │  • ChiptuneSynthVoice.cpp (CHIP)     │
-│  (Stripped, ABI-stable)        │ │  • YourCustomSynthVoice.cpp          │
+│  (Stripped, ABI-stable)        │ │  • GenesisSynthVoice.cpp (GEN)       │
+│                                │ │  • YourCustomSynthVoice.cpp          │
 └────────────────────────────────┘ └──────────────────────────────────────┘
 ```
 
@@ -786,7 +788,15 @@ The Tracker Patch Editor displays a **2x6 grid of tiles**: the **top 6 tiles** r
 
 ---
 
-## 8. Reference Implementation: `CHIP` (`ChiptuneSynthVoice`)
+## 8. Genesis-Style 4-Operator FM: `GEN` (`GenesisSynthVoice`)
+
+The open-source **`GEN`** engine is a self-contained, per-voice four-operator FM synth implemented with the same SDK pattern:
+
+- **Header**: [`core/synth/engines/GenesisSynthVoice.h`](../core/synth/engines/GenesisSynthVoice.h)
+- **Implementation**: [`core/synth/engines/GenesisSynthVoice.cpp`](../core/synth/engines/GenesisSynthVoice.cpp)
+- Provides eight operator-routing algorithms, operator multiplier/detune/level and envelope controls, channel feedback, and LFO modulation.
+
+## 9. Reference Implementation: `CHIP` (`ChiptuneSynthVoice`)
 
 For a full-featured production example built exclusively with `PolySynth/sdk/SynthVoiceSDK.h`, study the open-source **`CHIP`** synth engine:
 
