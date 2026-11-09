@@ -101,6 +101,31 @@ static constexpr std::array<const char*, 8> kDetuneNames = {
     "0", "+1", "+2", "+3", "0", "-1", "-2", "-3",
 };
 
+static constexpr size_t kSineTableSize = 2048;
+static constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
+static constexpr float kInvTwoPi = 1.0f / kTwoPi;
+
+const std::array<float, kSineTableSize + 1> kSineTable = []
+{
+    std::array<float, kSineTableSize + 1> table{};
+    for (size_t i = 0; i < kSineTableSize; ++i)
+    {
+        table[i] = std::sin(kTwoPi * static_cast<float>(i) /
+                            static_cast<float>(kSineTableSize));
+    }
+    table[kSineTableSize] = table[0];
+    return table;
+}();
+
+float sineLookup(float phaseCycles)
+{
+    phaseCycles -= std::floor(phaseCycles);
+    const float tablePosition = phaseCycles * static_cast<float>(kSineTableSize);
+    const auto index = static_cast<size_t>(tablePosition);
+    const float fraction = tablePosition - static_cast<float>(index);
+    return kSineTable[index] + fraction * (kSineTable[index + 1] - kSineTable[index]);
+}
+
 class GenesisSynthVoice : public sdk::CustomSynthVoice<GenesisSynthVoice, GenesisParamId>
 {
   public:
@@ -166,7 +191,6 @@ class GenesisSynthVoice : public sdk::CustomSynthVoice<GenesisSynthVoice, Genesi
 
         constexpr float sampleRate = sdk::kSampleRate;
         constexpr float invSampleRate = 1.0f / sampleRate;
-        constexpr float twoPi = 2.0f * std::numbers::pi_v<float>;
         constexpr float modulationIndex = 5.0f;
         const float feedbackAmount =
           (feedback == 0) ? 0.0f : std::pow(2.0f, static_cast<float>(feedback - 1)) * 0.1f;
@@ -183,7 +207,7 @@ class GenesisSynthVoice : public sdk::CustomSynthVoice<GenesisSynthVoice, Genesi
             {
                 lfoPhase -= std::floor(lfoPhase);
             }
-            const float lfo = std::sin(twoPi * lfoPhase);
+            const float lfo = sineLookup(lfoPhase);
             const float pitchLfoRatio =
               (pitchModDepth > 0.0f) ? sdk::detuneMult(lfo * pitchModDepth) : 1.0f;
             const float baseFrequency = std::clamp(noteFrequency * pitchLfoRatio, 16.0f, 18000.0f);
@@ -764,8 +788,8 @@ class GenesisSynthVoice : public sdk::CustomSynthVoice<GenesisSynthVoice, Genesi
         {
             op.phase -= std::floor(op.phase);
         }
-        return std::sin(2.0f * std::numbers::pi_v<float> * op.phase + modulation) * op.envelope *
-               op.levelGain * amplitudeMod;
+        const float phaseCycles = op.phase + modulation * kInvTwoPi;
+        return sineLookup(phaseCycles) * op.envelope * op.levelGain * amplitudeMod;
     }
 
     std::array<Operator, 4> operators{};
