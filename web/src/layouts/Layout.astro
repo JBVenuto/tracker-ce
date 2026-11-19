@@ -2,7 +2,8 @@
 import Head from "../components/Head.astro";
 import Sidebar from "../components/Sidebar.astro";
 
-import './Layout.scss';
+import "./main.scss";
+import "./Layout.scss";
 ---
 
 <!doctype html>
@@ -13,7 +14,9 @@ import './Layout.scss';
 	<body>
 		<main>
 			<Sidebar />
-			<slot />
+			<article>
+				<slot />
+			</article>
 		</main>
 	</body>
 </html>
