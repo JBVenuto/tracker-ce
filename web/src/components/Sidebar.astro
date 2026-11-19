@@ -20,7 +20,20 @@ import './sidebar.scss';
     const sidebar = document.querySelector('.sidebar'),
         navButton = document.querySelector('.nav-button'),
         article = document.querySelector('.article-content'),
-        buttonColors = ['note-color', 'instrument-color', 'fx1-color', 'fx2-color'];
+        buttonColors = ['note-color', 'instrument-color', 'fx1-color', 'fx2-color'],
+        markdownRoutes: Record<string, string> = {
+            'CHANGELOG.md': 'CHANGELOG/',
+            'Home.md': '',
+            'README.md': '',
+            'custom_synth_sdk.md': 'custom_synth_sdk/',
+            'custom_themes_and_fonts.md': 'custom_themes_and_fonts/',
+            'developer_guide.md': 'developer_guide/',
+            'global_file_browser.md': 'global_file_browser/',
+            'image_viewer.md': 'image_viewer/',
+            'memory_map.md': 'memory_map/',
+            'modular_effects_system.md': 'modular_effects_system/',
+            'wavetable_envelopes.md': 'wavetable_envelopes/',
+        };
 
     if (sidebar) {
         const baseUrl = new URL(
@@ -33,6 +46,25 @@ import './sidebar.scss';
 
             if (href && !href.startsWith('/') && !href.startsWith('#') && !/^[a-z][a-z\d+.-]*:/i.test(href)) {
                 link.setAttribute('href', new URL(href, baseUrl).href);
+            }
+        });
+
+        article?.querySelectorAll('a[href]').forEach((link) => {
+            const href = link.getAttribute('href');
+            if (!href || href.startsWith('/') || href.startsWith('#') || /^[a-z][a-z\d+.-]*:/i.test(href)) return;
+
+            const path = href.split(/[?#]/, 1)[0];
+            const fileName = path.split('/').pop();
+            let route = fileName ? markdownRoutes[fileName] : undefined;
+
+            if (fileName === 'README.md' && path !== '../README.md') route = undefined;
+
+            if (route !== undefined) {
+                const destination = new URL(route, baseUrl);
+                const hash = href.indexOf('#');
+
+                if (hash >= 0) destination.hash = href.slice(hash + 1);
+                link.setAttribute('href', destination.href);
             }
         });
 
