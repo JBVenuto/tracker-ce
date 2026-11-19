@@ -2,7 +2,7 @@ main {
     display: flex;
     font-family: "Lucida Console", "Courier New", monospace;
     font-size: 16px;
-    gap: 10px;
+    gap: 0;
     height: 100vh;
     width: 100%;
     overflow: hidden;
@@ -17,10 +17,20 @@ main {
     article {
         min-width: 0;
         overflow: auto;
-        padding: 0 10px;
+        padding: 0 6px;
     }
 
     .hidden {
         display: none;
+    }
+}
+
+@media (width > 779px) {
+    main {
+        gap: 10px;
+
+        article {
+            padding: 0 10px;
+        }
     }
 }
