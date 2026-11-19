@@ -16,6 +16,7 @@ const {
 } = Astro.props;
 
 const socialCardType = socialImageUrl ? 'summary_large_image' : 'summary';
+const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
 <meta charset="utf-8" />
@@ -25,8 +26,8 @@ const socialCardType = socialImageUrl ? 'summary_large_image' : 'summary';
 <meta name="generator" content={Astro.generator} />
 <title>{title}</title>
 
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link rel="icon" href="/favicon.ico" />
+<link rel="icon" type="image/svg+xml" href={`${baseUrl}/favicon.svg`} />
+<link rel="icon" href={`${baseUrl}/favicon.ico`} />
 {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
 
 <meta property="og:site_name" content="Polyend Tracker CE" />
