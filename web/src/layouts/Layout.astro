@@ -1,0 +1,22 @@
+---
+import Head from "../components/Head.astro";
+import Sidebar from "../components/Sidebar.astro";
+
+import "./main.scss";
+import "./Layout.scss";
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<Head />
+	</head>
+	<body>
+		<main>
+			<Sidebar />
+			<article class="article-content">
+				<slot />
+			</article>
+		</main>
+	</body>
+</html>
