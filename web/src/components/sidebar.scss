@@ -1,16 +1,41 @@
 button {
-    height: 30px;
+    color-scheme: light;
+    font-size: 22px;
+    height: 38px;
+    border-radius: 5px;
+    border: solid 1px black;
+    padding: 0 8px 2px 8px;
 }
 
 nav {
-    width: 100%;
-    
-    ul {
-        padding-left: 20px;
-    }
+    width: 100%;  
+}
+
+.note-color {
+    background-color: #22D6B8;
+}
+
+.instrument-color {
+    background-color: #F0E040;
+}
+
+.fx1-color {
+    background-color: #A855F7;
+}
+
+.fx2-color {
+    background-color: #38BDF8;
 }
 
 @media (width > 779px) {
+    nav {
+        width: auto;
+
+        ul {
+            padding-left: 20px;
+        }
+    }
+
     button {
         display: none;
     }

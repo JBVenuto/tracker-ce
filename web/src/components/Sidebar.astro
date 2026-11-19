@@ -19,7 +19,8 @@ import './sidebar.scss';
 <script>
     const sidebar = document.querySelector('.sidebar'),
         navButton = document.querySelector('.nav-button'),
-        article = document.querySelector('.article-content');
+        article = document.querySelector('.article-content'),
+        buttonColors = ['note-color', 'instrument-color', 'fx1-color', 'fx2-color'];
 
     if (sidebar) {
         navButton?.addEventListener('click', () => {
@@ -33,4 +34,6 @@ import './sidebar.scss';
         updateVisibility();
         breakpoint.addEventListener('change', updateVisibility);
     }
+
+    navButton?.classList.add(buttonColors[Math.floor(Math.random() * 4)])
 </script>
