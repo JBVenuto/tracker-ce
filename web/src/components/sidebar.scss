@@ -1,0 +1,17 @@
+button {
+    height: 30px;
+}
+
+nav {
+    width: 100%;
+    
+    ul {
+        padding-left: 20px;
+    }
+}
+
+@media (width > 779px) {
+    button {
+        display: none;
+    }
+}

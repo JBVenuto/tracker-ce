@@ -1,9 +1,36 @@
 ---
 import { Content as Sidebar } from '../../../docs/_Sidebar.md';
 
-import './Sidebar.scss';
+import './sidebar.scss';
 ---
 
-<nav aria-label="Main navigation">
-    <Sidebar />
+<button
+    class="nav-button"
+    type="button"
+    aria-label="Open navigation"
+>
+  &#x2630;
+</button>
+
+<nav class="sidebar" aria-label="Main navigation">
+    <Sidebar class="sidebar-content" />
 </nav>
+
+<script>
+    const sidebar = document.querySelector('.sidebar'),
+        navButton = document.querySelector('.nav-button'),
+        article = document.querySelector('.article-content');
+
+    if (sidebar) {
+        navButton?.addEventListener('click', () => {
+            sidebar.classList.toggle('hidden');
+            article?.classList.toggle('hidden');
+        })
+
+        const breakpoint = window.matchMedia('(max-width: 779px)');
+        const updateVisibility = () => sidebar.classList.toggle('hidden', breakpoint.matches);
+
+        updateVisibility();
+        breakpoint.addEventListener('change', updateVisibility);
+    }
+</script>
