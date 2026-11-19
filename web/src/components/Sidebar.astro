@@ -23,6 +23,19 @@ import './sidebar.scss';
         buttonColors = ['note-color', 'instrument-color', 'fx1-color', 'fx2-color'];
 
     if (sidebar) {
+        const baseUrl = new URL(
+            `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`,
+            window.location.origin,
+        );
+
+        sidebar.querySelectorAll('a[href]').forEach((link) => {
+            const href = link.getAttribute('href');
+
+            if (href && !href.startsWith('/') && !href.startsWith('#') && !/^[a-z][a-z\d+.-]*:/i.test(href)) {
+                link.setAttribute('href', new URL(href, baseUrl).href);
+            }
+        });
+
         navButton?.addEventListener('click', () => {
             sidebar.classList.toggle('hidden');
             article?.classList.toggle('hidden');
