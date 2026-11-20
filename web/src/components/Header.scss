@@ -1,0 +1,20 @@
+header {
+    border-bottom: solid 1px #666666;
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+
+    a {
+        color: #f1f1f1;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 6px;
+
+        button {
+            color: #000000;
+            width: 40px;
+        }
+    }
+}

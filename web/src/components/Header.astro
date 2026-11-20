@@ -1,3 +1,54 @@
+---
+import downloadIcon from '../assets/icons/download.svg?raw';
+import githubIcon from '../assets/icons/github.svg?raw';
+import moonIcon from '../assets/icons/moon.svg?raw';
+import polyendLogo from '../assets/polyend-icon.svg?raw'
+import searchIcon from '../assets/icons/search.svg?raw';
+import sunIcon from '../assets/icons/sun.svg?raw';
+import './Header.scss';
+---
+
 <header>
-    
+    <a href="https://polyend.com/" target="_blank">
+        <span set:html={polyendLogo}></span>
+    </a>
+    <div class="button-group">
+        <button class="note-color" type="button" aria-label="Search">
+            <span set:html={searchIcon}></span>
+        </button>
+        <button class="instrument-color" type="button" aria-label="Search">
+            <span set:html={downloadIcon}></span>
+        </button>
+        <button class="fx1-color" type="button" aria-label="Tracker CE GitHub repo">
+            <span set:html={githubIcon}></span>
+        </button>
+        <button class="theme-toggle fx2-color" type="button" aria-label="Switch to light mode">
+            <span class="theme-toggle-icon" set:html={sunIcon}></span>
+        </button>
+    </div>
 </header>
+
+<script>
+    const root = document.documentElement;
+    const themeToggle = document.querySelector<HTMLButtonElement>('.theme-toggle');
+    const savedTheme = localStorage.getItem('theme');
+
+    if (savedTheme === 'light' || savedTheme === 'dark') {
+        root.dataset.theme = savedTheme;
+    }
+
+    if (themeToggle) {
+        const updateLabel = () => {
+            const theme = root.dataset.theme ?? 'dark';
+            themeToggle.setAttribute('aria-label', `Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`);
+        };
+
+        updateLabel();
+        themeToggle.addEventListener('click', () => {
+            const nextTheme = root.dataset.theme === 'light' ? 'dark' : 'light';
+            root.dataset.theme = nextTheme;
+            localStorage.setItem('theme', nextTheme);
+            updateLabel();
+        });
+    }
+</script>
