@@ -13,7 +13,7 @@ import './Header.scss';
         <span set:html={polyendLogo}></span>
     </a>
     <div class="button-group">
-        <button class="note-color" type="button" aria-label="Search">
+        <button class="search-toggle note-color" type="button" aria-label="Search">
             <span set:html={searchIcon}></span>
         </button>
         <button class="instrument-color" type="button" aria-label="Search">
@@ -27,11 +27,21 @@ import './Header.scss';
         </button>
     </div>
 </header>
+<pagefind-modal id="search-modal"></pagefind-modal>
 
 <script>
     const root = document.documentElement;
+    const searchButton = document.querySelector<HTMLButtonElement>('.search-toggle');
+    const searchModal = document.querySelector<HTMLElement & { open: () => void }>('pagefind-modal');
     const themeToggle = document.querySelector<HTMLButtonElement>('.theme-toggle');
     const savedTheme = localStorage.getItem('theme');
+
+    if (searchButton && searchModal) {
+        searchButton.addEventListener('click', async () => {
+            await customElements.whenDefined('pagefind-modal');
+            searchModal.open();
+        });
+    }
 
     if (savedTheme === 'light' || savedTheme === 'dark') {
         root.dataset.theme = savedTheme;

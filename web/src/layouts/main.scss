@@ -25,3 +25,14 @@
 .fx2-color {
     background-color: #38BDF8;
 }
+
+#search-modal {
+  --pf-background: #111111;
+  --pf-text: #f1f1f1;
+  --pf-border: solid 2px #666666;
+}
+
+:root[data-theme="light"] #search-modal {
+  --pf-background: #FFFFFF;
+  --pf-text: #000000;
+}

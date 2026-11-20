@@ -17,6 +17,7 @@ const {
 
 const socialCardType = socialImageUrl ? 'summary_large_image' : 'summary';
 const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, '');
+const pagefindUrl = `${baseUrl}/pagefind`;
 ---
 
 <meta charset="utf-8" />
@@ -28,6 +29,9 @@ const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 <link rel="icon" type="image/png" sizes="32x32" href={`${baseUrl}/favicon-32x32.png`}>
 <link rel="icon" type="image/png" sizes="16x16" href={`${baseUrl}/favicon-16x16.png`}>
+<link rel="stylesheet" href={`${pagefindUrl}/pagefind-component-ui.css`} />
+<pagefind-config bundle-path={`${pagefindUrl}/`} base-url={`${baseUrl}/`}></pagefind-config>
+<script is:inline type="module" src={`${pagefindUrl}/pagefind-component-ui.js`}></script>
 {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
 
 <meta property="og:site_name" content="Polyend Tracker CE" />
