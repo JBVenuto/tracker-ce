@@ -1,6 +1,38 @@
+@font-face {
+    font-family: "Liberation Sans";
+    src: url("../assets/fonts/LiberationsSans-Regular.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Liberation Sans";
+    src: url("../assets/fonts/LiberationsSans-Bold.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Liberation Sans";
+    src: url("../assets/fonts/LiberationsSans-Italic.ttf") format("truetype");
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Liberation Sans";
+    src: url("../assets/fonts/LiberationsSans-BoldItalic.ttf") format("truetype");
+    font-style: italic;
+    font-weight: 700;
+    font-display: swap;
+}
+
 main {
     display: flex;
-    font-family: "Lucida Console", "Courier New", monospace;
+    font-family: "Liberation Sans", Arial, sans-serif;
     font-size: 16px;
     gap: 0;
     height: 100vh;
@@ -8,7 +40,7 @@ main {
     overflow: hidden;
 
     nav {
-        border-right: solid 2px black;
+        border-right: solid 2px #181818;
         min-width: 180px;
         overflow: auto;
         padding: 5px 10px;
