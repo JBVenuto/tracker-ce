@@ -26,8 +26,10 @@ const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, '');
 <meta name="generator" content={Astro.generator} />
 <title>{title}</title>
 
-<link rel="icon" type="image/svg+xml" href={`${baseUrl}/favicon.svg`} />
-<link rel="icon" href={`${baseUrl}/favicon.ico`} />
+<link rel="icon" type="image/png" sizes="32x32" href={`${baseUrl}/favicon-32x32.png`}>
+<link rel="icon" type="image/png" sizes="16x16" href={`${baseUrl}/favicon-16x16.png`}>
+<!-- <link rel="icon" type="image/svg+xml" href={`${baseUrl}/favicon.svg`} />
+<link rel="icon" href={`${baseUrl}/favicon.ico`} /> -->
 {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
 
 <meta property="og:site_name" content="Polyend Tracker CE" />
