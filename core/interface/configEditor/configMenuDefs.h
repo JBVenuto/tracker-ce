@@ -156,6 +156,8 @@ const char* const limiterModeTexts[2] = {
 
 const char* const sendsModeTexts[2] = { "Pre-fader", "Post-fader" };
 
+const char* const maxTracksTexts[kMaxTracksModeCount] = { "4", "8", "12", "16" };
+
 const char* const numberingModeTexts[3] = {
     "Decimal, Steps from 0",
     "Decimal, Steps from 1",
@@ -323,6 +325,11 @@ const char snapToZeroDesc[] = {
     "marker color."
 };
 
+const char maxTracksDesc[] = {
+    "Limits the number of active visible and audible tracks (4, 8, 12, or 16) for a focused or "
+    "retro workflow. All 16 tracks remain preserved internally in the project."
+};
+
 const char hexModeDesc[] = { "Enable the throwback hex goodness: pattern step numbers start with "
                              "00 and use sixteen digits (A means 10, B means 11, and so "
                              "on all the way to F which means 15). This allows for easy alignment "
@@ -377,6 +384,10 @@ const char slaveClockCompDesc[] = { "Allows compensating latency of incoming clo
 const char supportedCcInDesc[] = { "Supported incoming CC\nmessages:\n\nCC41 - CC48\n(performance "
                                    "mode track),\n\nCC51 - CC62\n(performance mode slot),"
                                    "\n\nCC71 - CC82\n(master mixer levels)." };
+
+const char programChangeInDesc[] = { "Incoming MIDI Program\nChange (0-127) queues\nPattern 1-128 "
+                                     "for the\nnext pattern boundary,\nor switches immediately\nwhen "
+                                     "stopped." };
 
 #ifdef TRACKER_MINI
 

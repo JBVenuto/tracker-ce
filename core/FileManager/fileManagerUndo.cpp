@@ -5,6 +5,7 @@
 
 #include "fileManager.h"
 #include "patternEditor/patternEditor.h"
+#include <algorithm>
 static cPatternEditor* PTE = &patternEditor;
 
 const uint8_t UNDO_CAPACITY = 20;
@@ -68,17 +69,32 @@ void cFileManager::restorePatternSelection(uint8_t index)
 {
     strTrackerPattern* dest = &PTE->trackerPattern;
     strUndoPatternBuffer_Selection* src = &undoPatternBufferSelection[index];
+    const uint8_t maxTracks = getProjectMaxTracks();
 
     PTE->editParam = src->editParam_;
 
-    dest->actualTrack = src->currentTrack;
+    dest->actualTrack =
+      static_cast<int8_t>(std::min<int>(std::max<int>(src->currentTrack, 0), maxTracks - 1));
     dest->actualStep = src->currentStep;
 
-    dest->selectState = src->selectState;
+    if (src->selectState == 2 &&
+        (src->selectStartTrack >= maxTracks || src->selectEndTrack >= maxTracks))
+    {
+        dest->selectState = 1;
+        dest->selectStartTrack = dest->actualTrack;
+        dest->selectEndTrack = dest->actualTrack;
+        dest->selectColumn = 0;
+    }
+    else
+    {
+        dest->selectState = src->selectState;
+        dest->selectStartTrack = static_cast<int8_t>(
+          std::min<int>(std::max<int>(src->selectStartTrack, 0), maxTracks - 1));
+        dest->selectEndTrack =
+          static_cast<int8_t>(std::min<int>(std::max<int>(src->selectEndTrack, 0), maxTracks - 1));
+    }
 
-    dest->selectStartTrack = src->selectStartTrack;
     dest->selectStartStep = src->selectStartStep;
-    dest->selectEndTrack = src->selectEndTrack;
     dest->selectEndStep = src->selectEndStep;
 }
 void cFileManager::storePatternUndoRevision()

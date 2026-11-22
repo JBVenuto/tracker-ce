@@ -22,6 +22,7 @@ void UartMidiImpl::setReceiveActions(MidiReceiveActions* receiveActions)
     midiDriver.setHandleSongPosition(receiveActions->songPosition);
     midiDriver.setHandleContinue(receiveActions->continueMessage);
     midiDriver.setHandleControlChange(receiveActions->controlChange);
+    midiDriver.setHandleProgramChange(receiveActions->programChange);
 }
 
 bool UartMidiImpl::isReadAvailable()

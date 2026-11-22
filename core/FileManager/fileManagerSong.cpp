@@ -106,7 +106,8 @@ void cFileManager::copySongTracks(char* currentProjectPath,
         sequencer.clearPattern(destPattern);
     }
 
-    while ((trackStartSrc + tracksNum) > kAllTracks || (trackStartDest + tracksNum) > kAllTracks)
+    const int maxTracks = getProjectMaxTracks();
+    while ((trackStartSrc + tracksNum) > maxTracks || (trackStartDest + tracksNum) > maxTracks)
     {
         tracksNum--;
 
@@ -141,7 +142,7 @@ void cFileManager::copySongTracks(char* currentProjectPath,
       !status || (mtProject.values.allPatternsBitmask[destBitmaskIdx] == 0 &&
                   mtProject.values.allPatternsBitmaskMidi[destBitmaskIdx] == 0);
 
-    if (tracksNum == kAllTracks || isDestPatternEmpty)
+    if (tracksNum == maxTracks || isDestPatternEmpty)
     {
         destPattern->track[0].length = srcPattern->track[0].length;
     }
@@ -181,8 +182,13 @@ void cFileManager::deleteTracks(char* currentProjectPath,
     {
         storeSongUndoRevision(srcPatternIdx);
 
+        const uint8_t maxTracks = getProjectMaxTracks();
         for (uint8_t track = 0; track < tracksNum; track++)
         {
+            if (track + trackStartSrc >= maxTracks)
+            {
+                break;
+            }
             sequencer.clearSingleTrack(&srcPattern->track[track + trackStartSrc]);
         }
 

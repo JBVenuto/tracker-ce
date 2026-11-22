@@ -26,6 +26,7 @@ static void recoveryProjectVersion13();
 static void recoveryProjectVersion14();
 static void recoveryProjectVersion15();
 static void recoveryProjectVersion16();
+static void recoveryProjectVersion17();
 static void recoveryInstrumentVersion1();
 static void recoveryInstrumentVersion2();
 static void recoveryInstrumentVersion3();
@@ -58,6 +59,7 @@ mtVersionRecovery::mtVersionRecovery()
     recoveryProjectFunction[13] = recoveryProjectVersion14;
     recoveryProjectFunction[14] = recoveryProjectVersion15;
     recoveryProjectFunction[15] = recoveryProjectVersion16;
+    recoveryProjectFunction[16] = recoveryProjectVersion17;
 
     // INSTRUMENT
     recoveryInstrumentFunction[0] = recoveryInstrumentVersion1;
@@ -380,6 +382,12 @@ void recoveryProjectVersion16()
 {
     strMtProjectRemote* receivedProject = versionRecovery.getReadedProject();
     receivedProject->values.recorderGainUsb = 0;
+}
+
+static void recoveryProjectVersion17()
+{
+    strMtProjectRemote* receivedProject = versionRecovery.getReadedProject();
+    receivedProject->values.maxTracksMode = kMaxTracksModeDefault;
 }
 
 //*************************************************************************INSTRUMENT

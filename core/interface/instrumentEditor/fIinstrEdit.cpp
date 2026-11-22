@@ -12,6 +12,7 @@
 #include "config.h"
 #include "core/interface.h"
 #include "cr_section_macros.h"
+#include "fileBrowser/GlobalFileBrowser.h"
 #include "fileManager.h"
 #include "performanceMode/performanceMode.h"
 #include "util_math.h"
@@ -58,6 +59,7 @@ static void functEffectSelectDelay();
 static void functEffectSelectOverdrive();
 static void functEffectSelectBitDepth();
 static void functOpenInstrumentSynthesizer();
+static void functEffectSavePti();
 static void functEffectBack();
 
 void changeParamsVelocity(int16_t value);
@@ -88,6 +90,8 @@ void cInstrumentEditor::start(uint32_t options)
     {
         mtProject.values.lastUsedInstrument = 0;
     }
+
+    bool openEffectsWindow = false;
 
     // adjust mode when instrument is other than current mode expects
     switch (options)
@@ -154,6 +158,15 @@ void cInstrumentEditor::start(uint32_t options)
             else
             {
                 assert(false);
+            }
+            break;
+        }
+        case 5:
+        {
+            if (isSampleInstrument(mtProject.values.lastUsedInstrument))
+            {
+                mode = mtInstEditModeParams;
+                openEffectsWindow = true;
             }
             break;
         }
@@ -269,7 +282,14 @@ void cInstrumentEditor::start(uint32_t options)
         default:
         {
             showInstrumentParams();
-            setDefaultScreenFunct();
+            if (openEffectsWindow)
+            {
+                switchToEffectScreen();
+            }
+            else
+            {
+                setDefaultScreenFunct();
+            }
             break;
         }
     }
@@ -428,6 +448,7 @@ void cInstrumentEditor::setEffectScreenFunct()
     ip->setButtonObj(interfaceButton2, buttonPress, functEffectSelectReverb);
     ip->setButtonObj(interfaceButton3, buttonPress, functEffectSelectDelay);
     ip->setButtonObj(interfaceButton4, buttonPress, functOpenInstrumentSynthesizer);
+    ip->setButtonObj(interfaceButton6, buttonPress, functEffectSavePti);
 
     ip->setButtonObj(interfaceButton7, buttonPress, functEffectBack);
 }
@@ -3159,6 +3180,54 @@ static void functOpenInstrumentSynthesizer()
     IE->cancelMultiFrame();
 
     IE->start(3);
+}
+
+static void functEffectSavePti()
+{
+    const uint8_t instrIdx = mtProject.values.lastUsedInstrument;
+    if (!isSampleInstrument(instrIdx) || IE->editorInstrument == nullptr ||
+        !IE->editorInstrument->isActive || IE->editorInstrument->sample.length == 0)
+    {
+        mtPopups.show(1, "Instrument slot is empty");
+        return;
+    }
+
+    sequencer.stopManualNotes();
+
+    std::string defName = "instrument";
+    if (IE->editorInstrument->sample.file_name[0] != '\0')
+    {
+        defName = IE->editorInstrument->sample.file_name;
+        if (defName.size() > 4)
+        {
+            std::string ext = defName.substr(defName.size() - 4);
+            if (ext[0] == '.' && (ext[1] == 'p' || ext[1] == 'P') &&
+                (ext[2] == 't' || ext[2] == 'T') && (ext[3] == 'i' || ext[3] == 'I'))
+            {
+                defName.resize(defName.size() - 4);
+            }
+        }
+    }
+
+    GlobalFileBrowserConfig cfg;
+    cfg.mode = GlobalFileBrowserConfig::Mode::kSaveGenericFile;
+    cfg.title = "Save Instrument (.pti)";
+    cfg.initialDirectory = "/Instruments";
+    cfg.defaultFileName = defName;
+    cfg.extensionFilter = ".pti";
+    cfg.maxNameLength = sizeof(strInstrument::strSampleBankSlot::file_name) - 1;
+    cfg.contextKey = "save_pti";
+    cfg.returnModule = IE;
+    cfg.returnModuleOptions = 5;
+
+    cfg.onConfirm = [instrIdx](const std::string& fullPath)
+    {
+        sequencer.stopManualNotes();
+        bool ok = newFileManager.saveInstrumentToPtiFile(instrIdx, fullPath.c_str());
+        mtPopups.show(ok ? 0 : 1, ok ? "Instrument saved" : "Error saving .pti");
+    };
+
+    openGlobalFileBrowser(cfg);
 }
 
 static void functEffectBack()

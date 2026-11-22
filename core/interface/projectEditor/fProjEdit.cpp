@@ -2,6 +2,7 @@
 #include <mtAudioExport.h>
 #include <mtRandomNameGenerator.h>
 
+#include "configEditor/configMenuActions.h"
 #include "core/interfaceMenuPopup.h"
 #include "core/interfacePopups.h"
 
@@ -409,6 +410,11 @@ uint8_t cProjectEditor::loadProjectValues()
 
     //----------------------------------------------------------------------------------------------------
     // performance mode i inne
+    if (mtProject.values.maxTracksMode >= kMaxTracksModeCount)
+    {
+        mtProject.values.maxTracksMode = kMaxTracksModeDefault;
+    }
+
     for (uint8_t i = 0; i < kMaxAllTracksInTrackers; i++)
     {
         mtProject.perfTracksPatterns[i] = 1;
@@ -427,7 +433,7 @@ uint8_t cProjectEditor::loadProjectValues()
         if (mtProject.values.trackMute[i] >= trackMasterModeCount)
             mtProject.values.trackMute[i] = 0;
 
-        engine.muteTrack(i, mtProject.values.trackMute[i]);
+        engine.muteTrack(i, isSampleTrackMutedOrHidden(i) ? 1 : 0);
     }
 
     for (uint8_t i = 0; i < kMaxMidiTracksInTrackers; i++)
@@ -541,6 +547,8 @@ uint8_t cProjectEditor::loadProjectValues()
         engine.refreshSynthInstrumentParams(mtProject.values.synthPart[part], part);
     }
 #endif
+
+    applyProjectMaxTracks();
 
     return 1;
 }

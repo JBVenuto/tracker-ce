@@ -67,7 +67,7 @@ constexpr uint8_t F_PAD = 27;
 
 constexpr uint8_t J_PAD = 30;
 
-constexpr uint8_t MAX_NAME_LENGTH = 33;
+constexpr uint8_t MAX_NAME_LENGTH = 65;
 
 class Leds;
 class Timer;

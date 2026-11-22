@@ -15,6 +15,12 @@
 
 #include "Tracker.h"
 #include "core/interface.h"
+#include "masterParams/masterParams.h"
+#include "mtSequencer.h"
+#include "patternEditor/patternEditor.h"
+#include "performanceMode/performanceEngine.h"
+#include "performanceMode/performanceMode.h"
+#include "songEditor/songEditor.h"
 
 // device startup actions after Config read
 void initConfigValuesAfterReadConfig()
@@ -128,6 +134,39 @@ void setHeadroomMode()
 void setSnapToZeroMode()
 {
     engine.setSnapToZeroEnable((bool)mtProject.values.isSnapToZeroEnabled);
+    newFileManager.setProjectStructChanged();
+}
+
+void applyProjectMaxTracks()
+{
+    if (mtProject.values.maxTracksMode >= kMaxTracksModeCount)
+    {
+        mtProject.values.maxTracksMode = kMaxTracksModeDefault;
+    }
+
+    const uint8_t maxTracks = getProjectMaxTracks();
+
+    sequencer.onMaxTracksChanged(maxTracks);
+
+    for (uint8_t tr = 0; tr < kSampleTracks; tr++)
+    {
+        engine.muteTrack(tr, isSampleTrackMutedOrHidden(tr) ? 1 : 0);
+        if (tr >= maxTracks)
+        {
+            instrumentPlayer[tr].noteOff();
+        }
+    }
+
+    performance.disarmHiddenTracks(maxTracks);
+    performanceMode.onMaxTracksChanged(maxTracks);
+    patternEditor.onMaxTracksChanged(maxTracks);
+    songEditor.onMaxTracksChanged(maxTracks);
+    masterParams.onMaxTracksChanged(maxTracks);
+}
+
+void setMaxTracks()
+{
+    applyProjectMaxTracks();
     newFileManager.setProjectStructChanged();
 }
 

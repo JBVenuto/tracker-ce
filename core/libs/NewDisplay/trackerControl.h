@@ -51,6 +51,7 @@ struct strTrackerPattern
     // koniec sekcji zaznaczenia
 
     uint8_t popupMode; // 1 = obcina fill; 2 waski step popup; 4 szeroki step popup
+    uint8_t tracksCount = kTrackCount;
 
     uint8_t inactive[kTrackCount];
 
@@ -96,6 +97,7 @@ struct strTrackerPattern
         selectEndStep = 0;
         selectColumn = 0;
         popupMode = 0;
+        tracksCount = kTrackCount;
         showTrackNames = false;
     }
 };

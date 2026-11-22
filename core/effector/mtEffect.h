@@ -11,11 +11,7 @@ extern int16_t* externalRamEffectsBuff;
 class mtEffect
 {
   public:
-#ifdef PLATFORM_IMX
     static constexpr int kChannels = 2;
-#else
-    static constexpr int kChannels = 1;
-#endif
     enum Channel
     {
         kLeft,

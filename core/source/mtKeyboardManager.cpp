@@ -38,9 +38,13 @@ void mtKeyboardManager::refreshColors()
 
 void mtKeyboardManager::activateKeyboard(int nameLengthLimit)
 {
-    if (nameLengthLimit > 0 && nameLengthLimit <= 32)
+    if (nameLengthLimit > 0 && nameLengthLimit < MAX_NAME_LENGTH)
     {
         setNameLengthLimit(nameLengthLimit);
+    }
+    else
+    {
+        setNameLengthLimit(32);
     }
 
     editPosition = strlen(name);

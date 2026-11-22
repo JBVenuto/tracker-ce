@@ -47,6 +47,7 @@ void midiInit(UartMidi* uartMidi, UsbMidi* usbMidi)
     uartMidiReceiveActions.songPosition = handleJackSongPosition;
     uartMidiReceiveActions.continueMessage = receiveJackContinue;
     uartMidiReceiveActions.controlChange = handleJackControlChange;
+    uartMidiReceiveActions.programChange = handleJackProgramChange;
     uartMidi->setReceiveActions(&uartMidiReceiveActions);
 
     // usb
@@ -56,6 +57,7 @@ void midiInit(UartMidi* uartMidi, UsbMidi* usbMidi)
     usbMidiReceiveActions.noteOff = handleUsbNoteOff;
     usbMidiReceiveActions.songPosition = handleUsbSongPosition;
     usbMidiReceiveActions.controlChange = handleUSBControlChange;
+    usbMidiReceiveActions.programChange = handleUsbProgramChange;
 
     usbMidi->setReceiveActions(&usbMidiReceiveActions);
 }
@@ -301,6 +303,48 @@ void handleUSBControlChange(byte channel, byte number, byte value)
         IE->onControlChangeReceive(number, value);
         SP->onControlChangeReceive(number, value);
     }
+}
+
+static void handleProgramChange(byte channel, byte program)
+{
+    if ((channel != mtConfig.midi.programChangeInChannel) &&
+        (mtConfig.midi.programChangeInChannel != ALL_PROGRAM_CHANGE_CHANNELS))
+    {
+        return;
+    }
+
+    uint8_t targetPattern = (program & 0x7F) + 1;
+
+    if (sequencer.isPlay())
+    {
+        sequencer.sequencialSwitch_queuePattern(targetPattern);
+    }
+    else
+    {
+        sequencer.requestStoppedPatternSwitch(targetPattern);
+    }
+}
+
+void handleJackProgramChange(byte channel, byte program)
+{
+    if ((mtConfig.midi.programChangeInMode == programChangeIn_None) ||
+        (mtConfig.midi.programChangeInMode == programChangeIn_usb))
+    {
+        return;
+    }
+
+    handleProgramChange(channel, program);
+}
+
+void handleUsbProgramChange(byte channel, byte program)
+{
+    if ((mtConfig.midi.programChangeInMode == programChangeIn_None) ||
+        (mtConfig.midi.programChangeInMode == programChangeIn_jack))
+    {
+        return;
+    }
+
+    handleProgramChange(channel, program);
 }
 
 static uint32_t s_audioBlockStartUs = 0;

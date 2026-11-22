@@ -25,13 +25,17 @@ typedef enum {
     PARAM_INT       = 'd', // Rendered as integer (e.g. 42)
     PARAM_LIST      = 'l', // Rendered as scrollable string list (cList)
     PARAM_FILE      = 'w', // Opens GlobalFileBrowser to pick a .wav (or custom extension in unit[])
-    PARAM_SAVE_FILE = 's'  // Opens GlobalFileBrowser in Save mode to pick an output file path
+    PARAM_SAVE_FILE = 's', // Opens GlobalFileBrowser in Save mode to pick an output file path
+    PARAM_TEXT      = 't'  // Opens on-screen keyboard to enter text (up to 64 chars)
 } PtfxParamDisplayType;
 
 // Exactly 32 bytes; all float fields are 4-byte aligned (offsets +8, +12, +16, +20)
 // When display_type == PARAM_LIST ('l'):
 //   unit[0..1] = uint16_t list_offset (little-endian offset into code payload)
 //   unit[2]    = uint8_t  item_count  (number of null-terminated option strings)
+// When display_type == PARAM_TEXT ('t'):
+//   unit[0..1] = uint16_t default_text_offset (little-endian offset into code payload)
+//   unit[2]    = uint8_t  max_len             (max editable chars, 1..64; 0 = 64)
 typedef struct __attribute__((packed, aligned(4))) {
     char    label[8];      // +0x00: Knob label (max 7 chars + '\0', e.g. "Drive\0")
     float   min_val;       // +0x08: Minimum value (4-byte aligned!)
@@ -94,6 +98,7 @@ typedef struct {
     int32_t (*write_file)(const char* path, const void* buffer, uint32_t num_bytes);
     const int16_t* (*get_secondary_sample)(uint32_t* out_frames, uint8_t* out_channels);
     const char* (*get_selected_file_path)(uint8_t param_index);
+    const char* (*get_text_param)(uint8_t param_index);
 } PtfxHostApi;
 
 // Plugin Function Pointer Types

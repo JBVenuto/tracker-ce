@@ -118,6 +118,7 @@ class cSongEditor : public ModuleBase
     void startSongPlayer();
     void stopSongPlayer();
     void refreshSongPlayer(uint8_t source);
+    void onMaxTracksChanged(uint8_t maxTracks);
 
     void stopPlayingSelection();
 

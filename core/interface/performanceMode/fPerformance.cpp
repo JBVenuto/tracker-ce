@@ -99,6 +99,11 @@ void cPerformanceMode::start(uint32_t options)
         tracksPage = 1;
     }
 
+    if (getProjectMaxTracks() <= kSampleTracks)
+    {
+        tracksPage = 0;
+    }
+
     // zaladowanie danych do performencu
     if (mtConfig.general.performanceSource < performanceDataSourceCount)
     {
@@ -243,6 +248,20 @@ bool cPerformanceMode::turnOff()
     return performance.turnOff();
 }
 
+void cPerformanceMode::onMaxTracksChanged(uint8_t maxTracks)
+{
+    if (maxTracks <= kSampleTracks)
+    {
+        tracksPage = 0;
+    }
+
+    for (uint8_t tr = maxTracks; tr < kPerformanceTracks; tr++)
+    {
+        trackPatternChange[tr] = 0;
+        isCCToReceiveForTrack[tr] = false;
+    }
+}
+
 void cPerformanceMode::turnOffAtEndOfPattern()
 {
     if (!sequencer.isPerformanceMode())
@@ -316,20 +335,23 @@ void cPerformanceMode::refreshAllCC()
         }
     }
 
+    const uint8_t maxTracks = getProjectMaxTracks();
     for (uint8_t ccForTrack = 0; ccForTrack < kPerformanceTracks; ccForTrack++)
     {
         if (isCCToReceiveForTrack[ccForTrack])
         {
-            trackPatternChange[ccForTrack] = 0;
-            mtProject.perfTracksPatterns[ccForTrack] =
-              currentCCValueForTrack[ccForTrack] + 1;
-            setProjectSaveFlags();
+            if (ccForTrack < maxTracks)
+            {
+                trackPatternChange[ccForTrack] = 0;
+                mtProject.perfTracksPatterns[ccForTrack] = currentCCValueForTrack[ccForTrack] + 1;
+                setProjectSaveFlags();
 
-            sequencer.setTrackToLoadOnSwitch(ccForTrack,
-                                             mtProject.perfTracksPatterns[ccForTrack]);
+                sequencer.setTrackToLoadOnSwitch(ccForTrack,
+                                                 mtProject.perfTracksPatterns[ccForTrack]);
 
-            PM->refreshBlinkingTrack = 1;
-            refreshTrackPattern = 1;
+                PM->refreshBlinkingTrack = 1;
+                refreshTrackPattern = 1;
+            }
 
             isCCToReceiveForTrack[ccForTrack] = false;
         }
@@ -668,6 +690,11 @@ static void functSwitchModule(uint8_t button)
 
 static void functSwitchTracksPage()
 {
+    if (getProjectMaxTracks() <= kSampleTracks)
+    {
+        return;
+    }
+
     for (uint8_t i = 0; i < kPerformanceTracks; i++)
     {
         PM->trackPatternChange[i] = 0;
@@ -908,8 +935,11 @@ void peformanceModeOnMidiCC(uint8_t cc_idx, uint8_t cc_value)
     {
         uint8_t ccToTrack = cc_idx - PERFORMANCE_MODE_CC_FOR_TRACK_RANGE_MIN;
 
-        PM->isCCToReceiveForTrack[ccToTrack] = true;
-        PM->currentCCValueForTrack[ccToTrack] = cc_value;
+        if (ccToTrack < getProjectMaxTracks())
+        {
+            PM->isCCToReceiveForTrack[ccToTrack] = true;
+            PM->currentCCValueForTrack[ccToTrack] = cc_value;
+        }
     }
 }
 

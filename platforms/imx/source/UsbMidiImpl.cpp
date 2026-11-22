@@ -30,6 +30,12 @@ void UsbMidiImpl::read()
         case MessageType::kControlChange:
             midiReceiveActions.controlChange(message.channel, message.data1, message.data2);
             break;
+        case MessageType::kProgramChange:
+            if (midiReceiveActions.programChange != nullptr)
+            {
+                midiReceiveActions.programChange(message.channel, message.data1);
+            }
+            break;
         case MessageType::kSongPosition:
             midiReceiveActions.songPosition(
               (uint16_t)((message.data1 & 0x7f) | ((message.data2 & 0x7f) << 7)));

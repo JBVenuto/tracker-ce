@@ -59,6 +59,7 @@ class cPatternEditor : public ModuleBase
 
     void refreshPatternFromOutsideModule();
     void refreshPattern();
+    void onMaxTracksChanged(uint8_t maxTracks);
     void readPatternState();
     void setPlayheadRangeFromSelection();
 

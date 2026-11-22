@@ -378,7 +378,7 @@ void cSampleEditor::showEffectParamsScreen()
                     display.setControlHide(paramList[i]);
                     display.refreshControl(paramList[i]);
                 }
-                if (isParameterFile(paramIdx))
+                if (isParameterFile(paramIdx) || isParameterText(paramIdx))
                 {
                     display.setAddControlStyle(bar[i], controlStyleVerticalText | controlStyleFont2);
                     display.setControlText(bar[i], getParameterFileText(paramIdx));
@@ -682,7 +682,7 @@ void cSampleEditor::showParameterBar(uint8_t n)
     }
     else
     {
-        if (isParameterFile(n))
+        if (isParameterFile(n) || isParameterText(n))
         {
             display.setAddControlStyle(bar[barIdx], controlStyleVerticalText | controlStyleFont2);
             display.setControlText(bar[barIdx], getParameterFileText(n));
@@ -892,4 +892,55 @@ void cSampleEditor::hideUselessControls()
     display.setControlHide(playhead);
     display.setControlHide(spectrum[0]);
     display.setControlHide(spectrum[1]);
+}
+
+void cSampleEditor::showTextParamKeyboard()
+{
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        display.setControlHide(bar[i]);
+        display.refreshControl(bar[i]);
+        if (i < kEffectPageParams)
+        {
+            display.setControlHide(paramList[i]);
+            display.refreshControl(paramList[i]);
+        }
+    }
+    display.setControlHide(blankSpaceCover);
+    display.refreshControl(blankSpaceCover);
+    display.setControlHide(frame);
+    display.refreshControl(frame);
+    hideEffectList();
+    hideSpectrum();
+    hideSpectrumPoints();
+    hidePlayhead();
+
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        display.setControlValue(label[i], 0);
+        display.setControlText(label[i], "");
+        display.setControlText2(label[i], "");
+        display.setControlColors(label[i], display.getTheme().activeButtonLabelsColors);
+        display.setControlStyle(label[i],
+                                controlStyleCenterX | controlStyleCenterY | controlStyleFont3);
+        display.setControlPosition(label[i], (800 / 8) * i + (800 / 16), 424);
+        display.setControlSize(label[i], 800 / 8 - 6, 55);
+    }
+
+    display.setControlText(label[0], "Enter");
+    display.setControlText(label[1], "Clear");
+    display.setControlColors(label[2], display.getTheme().inactiveLabelsColors);
+    display.setControlColors(label[3], display.getTheme().inactiveLabelsColors);
+    display.setControlColors(label[4], display.getTheme().inactiveLabelsColors);
+    display.setControlColors(label[5], display.getTheme().inactiveLabelsColors);
+    display.setControlText(label[6], "Cancel");
+    display.setControlText(label[7], "Confirm");
+
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        display.setControlShow(label[i]);
+        display.refreshControl(label[i]);
+    }
+
+    display.synchronizeRefresh();
 }

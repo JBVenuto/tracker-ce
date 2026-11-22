@@ -37,6 +37,14 @@ enum enCCIn
     ccIn_usb_and_jack,
 };
 
+enum enProgramChangeIn
+{
+    programChangeIn_None,
+    programChangeIn_usb,
+    programChangeIn_jack,
+    programChangeIn_usb_and_jack,
+};
+
 enum enNotesOut
 {
     notesOut_mode_None,
@@ -54,6 +62,7 @@ enum enClockIn
 };
 
 constexpr uint8_t ALL_CC_CHANNELS = 0;
+constexpr uint8_t ALL_PROGRAM_CHANGE_CHANNELS = 0;
 class UartMidi;
 class UsbMidi;
 
@@ -84,6 +93,9 @@ void handleJackSongPosition(unsigned int);
 
 void handleJackControlChange(byte channel, byte number, byte value);
 void handleUSBControlChange(byte channel, byte number, byte value);
+
+void handleJackProgramChange(byte channel, byte program);
+void handleUsbProgramChange(byte channel, byte program);
 
 void receiveClock();
 void receiveStart();

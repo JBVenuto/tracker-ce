@@ -209,6 +209,9 @@ class cSampleEditor : public ModuleBase
     void setCommonFunctions();
     void setMainScreenFunctions();
     void setParamsScreenFunctions();
+    void setTextParamKeyboardFunctions();
+    void showTextParamKeyboard();
+    void openModularParamTextKeyboard(int paramIdx);
     void switchScreen(enScreenType s);
     void restoreFunctions();
     void setStopSeqFunctions();
@@ -492,6 +495,7 @@ class cSampleEditor : public ModuleBase
     const strEffectDisplayConstantParams& getCurrentEffectDisplayParams() const;
     bool isParameterList(uint8_t paramIdx) const;
     bool isParameterFile(uint8_t paramIdx) const;
+    bool isParameterText(uint8_t paramIdx) const;
     const char* getParameterFileText(uint8_t paramIdx) const;
     uint8_t getParameterListCount(uint8_t paramIdx) const;
     char** getParameterListItems(uint8_t paramIdx) const;

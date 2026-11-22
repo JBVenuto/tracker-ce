@@ -94,7 +94,7 @@ def parse_params_from_source(source_code):
     # Tokenize entries: either PTFX_PARAM_*(...) macros or { ... } brace initializers
     entry_pattern = re.compile(
         r"(PTFX_PARAM_LIST\s*\(\s*\"([^\"]*)\"\s*,\s*([^,]+),\s*\"([^\"]*)\"\s*\))"
-        r"|(PTFX_PARAM_(SAVE_FILE|FILE)\s*\(\s*\"([^\"]*)\"\s*,\s*\"([^\"]*)\"\s*\))"
+        r"|(PTFX_PARAM_(SAVE_FILE|FILE|TEXT)\s*\(\s*\"([^\"]*)\"\s*,\s*\"([^\"]*)\"\s*\))"
         r"|(PTFX_PARAM_(FLOAT|INT)\s*\(\s*\"([^\"]*)\"\s*,\s*([^,]+),\s*([^,]+),\s*([^,]+),\s*([^,]+),\s*\"([^\"]*)\"\s*\))"
         r"|(\{\s*\"([^\"]*)\"\s*,\s*([^,]+),\s*([^,]+),\s*([^,]+),\s*([^,]+),\s*\"([^\"]*)\"\s*,\s*(\w+)\s*\})"
     )
@@ -124,20 +124,33 @@ def parse_params_from_source(source_code):
                 "options": opts
             })
         elif m.group(5):
-            # PTFX_PARAM_FILE / PTFX_PARAM_SAVE_FILE(label, ext)
+            # PTFX_PARAM_FILE / PTFX_PARAM_SAVE_FILE(label, ext) / PTFX_PARAM_TEXT(label, def_text)
             file_kind = m.group(6)
             label = m.group(7)
-            ext = m.group(8)
-            params.append({
-                "label": label[:7],
-                "min": 0.0,
-                "max": 1.0,
-                "default": 0.0,
-                "step": 0.0,
-                "unit": ext[:5],
-                "type": 's' if file_kind == "SAVE_FILE" else 'w',
-                "options": []
-            })
+            arg2 = m.group(8)
+            if file_kind == "TEXT":
+                params.append({
+                    "label": label[:7],
+                    "min": 0.0,
+                    "max": 1.0,
+                    "default": 0.0,
+                    "step": 0.0,
+                    "unit": "",
+                    "type": 't',
+                    "options": [],
+                    "default_text": arg2[:64]
+                })
+            else:
+                params.append({
+                    "label": label[:7],
+                    "min": 0.0,
+                    "max": 1.0,
+                    "default": 0.0,
+                    "step": 0.0,
+                    "unit": arg2[:5],
+                    "type": 's' if file_kind == "SAVE_FILE" else 'w',
+                    "options": []
+                })
         elif m.group(9):
             # PTFX_PARAM_FLOAT / PTFX_PARAM_INT
             kind = m.group(10)
@@ -196,6 +209,18 @@ def parse_params_from_source(source_code):
                         "type": 's',
                         "options": []
                     })
+                elif "TEXT" in ptype:
+                    params.append({
+                        "label": label[:7],
+                        "min": 0.0,
+                        "max": 1.0,
+                        "default": 0.0,
+                        "step": 0.0,
+                        "unit": "",
+                        "type": 't',
+                        "options": [],
+                        "default_text": unit[:64]
+                    })
                 elif "FILE" in ptype:
                     params.append({
                         "label": label[:7],
@@ -245,7 +270,7 @@ def build_ptfx(c_file, output_file, name=None, author=None, flags_str=None, scra
         print(f"Warning: Only first {MAX_PARAMS} parameters will be used.")
         params = params[:MAX_PARAMS]
 
-    # Build packed string table for PARAM_LIST parameters
+    # Build packed string table for PARAM_LIST and PARAM_TEXT parameters
     string_table = bytearray()
     for p in params:
         if p["type"] == 'l' and p.get("options"):
@@ -254,6 +279,11 @@ def build_ptfx(c_file, output_file, name=None, author=None, flags_str=None, scra
             for opt in p["options"]:
                 opt_bytes = opt.encode("ascii", errors="replace")[:10] + b'\0'
                 string_table.extend(opt_bytes)
+        elif p["type"] == 't':
+            p["rel_list_offset"] = len(string_table)
+            p["item_count"] = 64  # max editable chars
+            def_text = p.get("default_text", "").encode("ascii", errors="replace")[:64] + b'\0'
+            string_table.extend(def_text)
         else:
             p["rel_list_offset"] = 0
             p["item_count"] = 0
@@ -394,7 +424,7 @@ def build_ptfx(c_file, output_file, name=None, author=None, flags_str=None, scra
             if i < len(params):
                 p = params[i]
                 lbl = p["label"].encode("ascii", errors="replace")[:7].ljust(8, b'\0')
-                if p["type"] == 'l':
+                if p["type"] == 'l' or p["type"] == 't':
                     abs_list_offset = strings_base + p["rel_list_offset"]
                     unit = struct.pack("<H B 3s", abs_list_offset, p["item_count"], b'\0\0\0')
                 else:

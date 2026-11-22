@@ -66,6 +66,7 @@ class cPerformEngine
 
     void setTrackState(uint8_t track, uint8_t state);
     void toggleTrackState(uint8_t track);
+    void disarmHiddenTracks(uint8_t maxTracks);
 
     void resetAllFx();
     void resetFxOnTrack(uint8_t fx, uint8_t track);

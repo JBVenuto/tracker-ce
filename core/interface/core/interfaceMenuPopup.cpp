@@ -1,5 +1,6 @@
 #include "interfaceMenuPopup.h"
 #include "core/interface.h"
+#include "mtStructs.h"
 
 InterfaceMenuPopup mtMenuPopup;
 
@@ -79,6 +80,10 @@ void InterfaceMenuPopup::showModulePopup(ModuleBase* sourceModule,
 
     InterfaceMenuPopup::switchModuleCallback = switchModuleCallback;
 
+    const uint8_t perfPages = (getProjectMaxTracks() > kSampleTracks) ? 2 : 1;
+    performModes.count = perfPages;
+    performModes.modes.count = perfPages;
+
     for (int box = 0; box < boxesCount; box++)
     {
         if (box >= kMenuModulesCount)
@@ -124,7 +129,9 @@ void InterfaceMenuPopup::showModulePopup(ModuleBase* sourceModule,
         {
             modules[menuFunctions[box]].modes->modes.current =
               modules[menuFunctions[box]].module->getCurrentModeIdx();
-            modulesMenuModes[box] = &modules[menuFunctions[box]].modes->modes;
+            modulesMenuModes[box] = (modules[menuFunctions[box]].modes->modes.count > 1)
+                                      ? &modules[menuFunctions[box]].modes->modes
+                                      : nullptr;
         }
         else
         {

@@ -3,6 +3,7 @@
 #include "display.h"
 #include "horizotnalTrackerControl.h"
 
+#include <algorithm>
 #include <cstring>
 
 static void Number2Bitmaps(int16_t x, int16_t y, uint8_t font_x, uint8_t font_y, int16_t number);
@@ -232,6 +233,14 @@ void cHorizontalTracker::update()
         paramCount = 4;
     }
 
+    const uint8_t activeTracks =
+      (tracks->tracksCount > 0 && tracks->tracksCount <= strTrackerPattern::kTrackCount)
+        ? tracks->tracksCount
+        : strTrackerPattern::kTrackCount;
+    const uint8_t remainingTracks =
+      (firstVisibleTrack < activeTracks) ? (activeTracks - firstVisibleTrack) : 0;
+    visibleTracksCount = std::min<uint8_t>(visibleTracksCount, remainingTracks);
+
     backgroundDivider();
 
     calculateSelection();
@@ -353,6 +362,13 @@ void cHorizontalTracker::lines()
         API_VERTEX2F(0, y);
         API_VERTEX2F(799, y);
     }
+    const uint8_t baseMaxRows = (displayMode > 0) ? 8 : 4;
+    if (visibleTracksCount > 0 && visibleTracksCount < baseMaxRows)
+    {
+        y = posY + stepsNumbersHight + trackHight * visibleTracksCount;
+        API_VERTEX2F(0, y);
+        API_VERTEX2F(799, y);
+    }
 
     API_END();
 }
@@ -380,7 +396,11 @@ void cHorizontalTracker::playHead()
         uint16_t phx1 = trackHeadWidth + (step)*stepWidth;
         uint16_t phx2 = trackHeadWidth + (step + 1) * stepWidth;
 
-        if (tracks->playheadStartTrack > 0 || tracks->playheadEndTrack < 7)
+        const uint8_t activeTracks =
+          (tracks->tracksCount > 0 && tracks->tracksCount <= strTrackerPattern::kTrackCount)
+            ? tracks->tracksCount
+            : strTrackerPattern::kTrackCount;
+        if (tracks->playheadStartTrack > 0 || (tracks->playheadEndTrack + 1) < activeTracks)
         {
             if (tracks->playheadStartTrack < tracks->playheadEndTrack)
             {
@@ -393,7 +413,7 @@ void cHorizontalTracker::playHead()
                 phy2 = tracks->playheadStartTrack;
             }
 
-            if (phy1 > (firstVisibleTrack + visibleTracksCount) || phy2 < firstVisibleTrack)
+            if (phy1 >= (firstVisibleTrack + visibleTracksCount) || phy2 < firstVisibleTrack)
             {
                 return;
             }
@@ -404,7 +424,13 @@ void cHorizontalTracker::playHead()
 
             phy2 = phy2 - firstVisibleTrack;
             phy2 = posY + stepsNumbersHight + phy2 * trackHight + trackHight;
-            phy2 = phy2 > phy2max ? (phy2max) : phy2;
+            const int16_t maxPhy2 = std::min<int16_t>(
+              phy2max, posY + stepsNumbersHight + visibleTracksCount * trackHight);
+            phy2 = phy2 > maxPhy2 ? maxPhy2 : phy2;
+            if (phy2 <= phy1)
+            {
+                return;
+            }
         }
         if (style & controlStyleGradient)
         {
@@ -609,7 +635,7 @@ void cHorizontalTracker::selection()
 
     // aktualnie modyfikowany step
     if (tracks->selectState && tracks->actualTrack >= firstVisibleTrack &&
-        tracks->actualTrack <= firstVisibleTrack + visibleTracksCount)
+        tracks->actualTrack < firstVisibleTrack + visibleTracksCount)
     {
         uint16_t select_x =
           trackHeadWidth + ((tracks->actualStep - tracks->middleVisibleStep) + 5) * stepWidth + 2;

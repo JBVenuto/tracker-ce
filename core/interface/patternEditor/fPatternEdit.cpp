@@ -1,5 +1,6 @@
 #include "mtStructs.h"
 #include "patternEditor/patternEditor.h"
+#include <algorithm>
 #include <assert.h>
 #include <limits.h>
 #include <mtAudioExport.h>
@@ -253,10 +254,11 @@ void cPatternEditor::update()
     if (sequencer.isStop())
     {
         // jesli ostatnio bylo odtwarzane zaznaczenie to cofnij playhed na 0
-        if (trackerPattern.playheadStartTrack > 0 || trackerPattern.playheadEndTrack < 7)
+        const uint8_t maxTrackIdx = getProjectMaxTracks() - 1;
+        if (trackerPattern.playheadStartTrack > 0 || trackerPattern.playheadEndTrack != maxTrackIdx)
         {
             trackerPattern.playheadStartTrack = 0;
-            trackerPattern.playheadEndTrack = 7;
+            trackerPattern.playheadEndTrack = maxTrackIdx;
             trackerPattern.playheadPosition = 0;
             refreshPattern();
         }
@@ -322,6 +324,7 @@ void cPatternEditor::start(uint32_t options)
     }
 
     trackerPattern.stepDevider = (mtProject.values.patternDiv + 1);
+    trackerPattern.tracksCount = getProjectMaxTracks();
 
     trackerPattern.showTrackNames = true;
     for (int nameIdx = 0; nameIdx < 16; nameIdx++)
@@ -399,6 +402,8 @@ void cPatternEditor::hideControlsUnderMiniMenu()
         trackStart = 2;
         trackEnd = 6;
     }
+
+    trackEnd = std::min<int>(trackEnd, getProjectMaxTracks());
 
     for (; trackStart < trackEnd; trackStart++)
     {
@@ -499,6 +504,7 @@ void cPatternEditor::refreshEditStateFromOutsideModule()
 void cPatternEditor::refreshPattern()
 {
     seq = sequencer.getPatternToUI();
+    trackerPattern.tracksCount = getProjectMaxTracks();
     trackerPattern.patternLength = seq->track[0].length + 1;
     trackerPattern.selectedParam = editParam;
 
@@ -533,7 +539,7 @@ void cPatternEditor::refreshPattern()
         {
             trackerPattern.selectState = 1;
             trackerPattern.playheadStartTrack = 0;
-            trackerPattern.playheadEndTrack = 7;
+            trackerPattern.playheadEndTrack = getProjectMaxTracks() - 1;
             trackerPattern.actualStep = trackerPattern.playheadPosition;
         }
         else if (!sequencer.isPlay())
@@ -557,7 +563,7 @@ void cPatternEditor::refreshPattern()
         else if (sequencer.isPlay())
         {
             trackerPattern.playheadStartTrack = 0;
-            trackerPattern.playheadEndTrack = 7;
+            trackerPattern.playheadEndTrack = getProjectMaxTracks() - 1;
         }
         else if (!sequencer.isPlay())
         {
@@ -960,22 +966,54 @@ int8_t cPatternEditor::getStepVol()
     return mapClamped<int>(show_vol, 0, 127, 0, 47);
 }
 
+void cPatternEditor::onMaxTracksChanged(uint8_t maxTracks)
+{
+    trackerPattern.tracksCount = maxTracks;
+    trackerPattern.actualTrack = static_cast<int8_t>(
+      std::min<int>(std::max<int>(trackerPattern.actualTrack, 0), maxTracks - 1));
+
+    if (trackerPattern.selectState == 2 && (trackerPattern.selectStartTrack >= maxTracks ||
+                                            trackerPattern.selectEndTrack >= maxTracks))
+    {
+        trackerPattern.selectState = 1;
+        trackerPattern.selectColumn = 0;
+        isSelectingNow = 0;
+    }
+
+    trackerPattern.selectStartTrack = static_cast<int8_t>(
+      std::min<int>(std::max<int>(trackerPattern.selectStartTrack, 0), maxTracks - 1));
+    trackerPattern.selectEndTrack = static_cast<int8_t>(
+      std::min<int>(std::max<int>(trackerPattern.selectEndTrack, 0), maxTracks - 1));
+
+    if (trackerPattern.playheadStartTrack >= maxTracks ||
+        trackerPattern.playheadEndTrack >= maxTracks)
+    {
+        trackerPattern.playheadStartTrack = 0;
+        trackerPattern.playheadEndTrack = maxTracks - 1;
+    }
+
+    focusOnActual();
+}
+
 // focusowanie trackow na kursorze, jesli jest poza ekranem
 void cPatternEditor::focusOnActual()
 {
-    int columnCounts = patternViewMode > 0 ? 8 : 4;
+    const int maxTracks = getProjectMaxTracks();
+    const int columnCounts = patternViewMode > 0 ? 8 : 4;
+    const int visibleCols = std::min<int>(columnCounts, maxTracks);
 
-    if (trackerPattern.actualTrack >= trackerPattern.firstVisibleTrack + columnCounts)
+    if (trackerPattern.actualTrack >= trackerPattern.firstVisibleTrack + visibleCols)
     {
-        trackerPattern.firstVisibleTrack = trackerPattern.actualTrack - (columnCounts - 1);
+        trackerPattern.firstVisibleTrack = trackerPattern.actualTrack - (visibleCols - 1);
     }
     else if (trackerPattern.actualTrack < trackerPattern.firstVisibleTrack)
     {
         trackerPattern.firstVisibleTrack = trackerPattern.actualTrack;
     }
 
+    const int maxFirstVisible = std::max<int>(0, maxTracks - visibleCols);
     trackerPattern.firstVisibleTrack =
-      clamp<int8_t>(trackerPattern.firstVisibleTrack, 0, kAllTracks - columnCounts);
+      clamp<int8_t>(trackerPattern.firstVisibleTrack, 0, maxFirstVisible);
 }
 
 void cPatternEditor::moveCursorByStep()
@@ -1429,7 +1467,7 @@ static void functMuteTrack(uint8_t button, uint8_t state)
         bool midiTrack = !isSampleTrack(PTE->trackerPattern.actualTrack);
         int trackIdx = midiTrack ? button + 8 : button;
 
-        if (trackIdx >= kAllTracks)
+        if (trackIdx >= getProjectMaxTracks())
         {
             return;
         }
@@ -1459,7 +1497,7 @@ static void functRecArmTrack(uint8_t button, uint8_t state)
         bool midiTrack = !isSampleTrack(PTE->trackerPattern.actualTrack);
         int trackIdx = midiTrack ? button + 8 : button;
 
-        if (trackIdx >= kAllTracks)
+        if (trackIdx >= getProjectMaxTracks())
         {
             return;
         }
@@ -2364,7 +2402,7 @@ void cPatternEditor::previousTrack()
             PTE->trackerPattern.selectEndTrack = PTE->trackerPattern.actualTrack;
             if (cursorAtEdge)
             {
-                PTE->trackerPattern.selectStartTrack = kAllTracks - 1;
+                PTE->trackerPattern.selectStartTrack = getProjectMaxTracks() - 1;
             }
             PTE->trackerPattern.selectState = 2;
             PTE->isSelectingNow = 1;
@@ -2375,7 +2413,7 @@ void cPatternEditor::previousTrack()
             PTE->trackerPattern.selectEndTrack = PTE->trackerPattern.actualTrack;
             if (cursorAtEdge)
             {
-                PTE->trackerPattern.selectStartTrack = kAllTracks - 1;
+                PTE->trackerPattern.selectStartTrack = getProjectMaxTracks() - 1;
             }
             PTE->trackerPattern.selectState = 2;
         }
@@ -2420,7 +2458,7 @@ void cPatternEditor::nextTrack()
         }
 
         bool cursorAtEdge = true;
-        if (PTE->trackerPattern.actualTrack < kAllTracks - 1)
+        if (PTE->trackerPattern.actualTrack < getProjectMaxTracks() - 1)
         {
             PTE->trackerPattern.actualTrack++;
             cursorAtEdge = false;
@@ -2434,7 +2472,7 @@ void cPatternEditor::nextTrack()
             PTE->trackerPattern.selectEndTrack = PTE->trackerPattern.actualTrack;
             if (cursorAtEdge)
             {
-                PTE->trackerPattern.selectStartTrack = kAllTracks - 1;
+                PTE->trackerPattern.selectStartTrack = getProjectMaxTracks() - 1;
             }
             PTE->trackerPattern.selectState = 2;
             PTE->isSelectingNow = 1;
@@ -2445,7 +2483,7 @@ void cPatternEditor::nextTrack()
             PTE->trackerPattern.selectEndTrack = PTE->trackerPattern.actualTrack;
             if (cursorAtEdge)
             {
-                PTE->trackerPattern.selectStartTrack = kAllTracks - 1;
+                PTE->trackerPattern.selectStartTrack = getProjectMaxTracks() - 1;
             }
             PTE->trackerPattern.selectState = 2;
         }
@@ -2462,7 +2500,7 @@ void cPatternEditor::nextTrack()
         // if(PTE->patternViewMode == 0 && PTE->trackerPattern.firstVisibleTrack < 4 )
         // PTE->trackerPattern.firstVisibleTrack++;
 
-        if (PTE->trackerPattern.actualTrack < kAllTracks - 1)
+        if (PTE->trackerPattern.actualTrack < getProjectMaxTracks() - 1)
             PTE->trackerPattern.actualTrack++;
         PTE->focusOnActual();
     }
@@ -2493,7 +2531,7 @@ void cPatternEditor::previousStep()
             PTE->trackerPattern.selectStartStep = 0;
             PTE->trackerPattern.selectStartTrack = 0;
             PTE->trackerPattern.selectEndStep = PTE->trackerPattern.patternLength - 1;
-            PTE->trackerPattern.selectEndTrack = kAllTracks - 1;
+            PTE->trackerPattern.selectEndTrack = getProjectMaxTracks() - 1;
             PTE->trackerPattern.selectState = 2;
             PTE->isSelectingNow = 1;
         }
@@ -3897,7 +3935,7 @@ static void functConfirmNameTrack()
 
         newFileManager.setProjectStructChanged();
     }
-    else if (PTE->trackerPattern.actualTrack < kAllTracks)
+    else if (PTE->trackerPattern.actualTrack < getProjectMaxTracks())
     {
         strncpy(mtProject.values.midiTrackNames[PTE->trackerPattern.actualTrack - kSampleTracks],
                 PTE->keyboardManager.getName(),
@@ -4134,6 +4172,7 @@ static void functUndoRedo(uint8_t state, bool undo)
             newFileManager.redoPattern();
         }
 
+        PTE->focusOnActual();
         PTE->refreshPattern();
         PTE->showPattern();
         PTE->showLength();
@@ -4153,6 +4192,7 @@ static void functUndoRedoOnLeftRight(int8_t dir)
         PTE->undoRedoOpen = 1;
     }
 
+    PTE->focusOnActual();
     PTE->refreshPattern();
     PTE->showPattern();
     PTE->showLength();
@@ -4181,10 +4221,12 @@ void cPatternEditor::loadPatternsStatus()
             }
         }
 #endif
-        uint8_t midiPatternBitmask = mtProject.values.allPatternsBitmaskMidi[pattern];
+        const uint16_t activeMask = static_cast<uint16_t>((1u << getProjectMaxTracks()) - 1u);
+        const uint16_t data =
+          static_cast<uint16_t>(mtProject.values.allPatternsBitmask[pattern]) |
+          (static_cast<uint16_t>(mtProject.values.allPatternsBitmaskMidi[pattern]) << 8);
 
-        if (mtProject.values.allPatternsBitmask[pattern] > 0 ||
-            (midiPatternBitmask > 0 && midiPatternBitmask < (1 << kAllTracks)))
+        if ((data & activeMask) != 0)
         {
             patternOccupyMap |= uint64_t(1) << pattern;
         }
@@ -4396,7 +4438,7 @@ void cPatternEditor::lightUpPadBoard()
         bool patternMode = (mtConfig.general.padPreviewInPatternEdit == padPreviewModePattern);
 
         for (int track = patternMode ? 0 : trackerPattern.actualTrack;
-             track < (patternMode ? Sequencer::TRACKS : trackerPattern.actualTrack + 1);
+             track < (patternMode ? getProjectMaxTracks() : trackerPattern.actualTrack + 1);
              track++)
         {
             int8_t show_note = seq->track[track].step[trackerPattern.actualStep].note;

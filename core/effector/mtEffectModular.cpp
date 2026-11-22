@@ -96,7 +96,12 @@ uint32_t mtEffectModular::getExpectedProcessLength()
 {
     bool isGenerator = (m_flags & PTFX_FLAG_GENERATOR) != 0;
     if (isGenerator)
+    {
+        uint32_t requested = m_prependSamples + m_appendSamples;
+        if (requested > 0)
+            return requested;
         return (m_targetLength > 0) ? m_targetLength : 44100;
+    }
     return confirmed[0].selection.length + m_prependSamples + m_appendSamples;
 }
 
@@ -186,7 +191,7 @@ int32_t mtEffectModular::processBlock()
         }
     }
 
-    // Process block across active channels (kChannels = 1 on MK66, 2 on IMX)
+    // Process block across active channels
     int32_t count = m_processBlockFunc(
         isGenerator ? m_srcAddr : inPtrs,
         m_dstAddr,

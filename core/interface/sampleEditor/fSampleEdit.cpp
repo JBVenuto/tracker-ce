@@ -490,6 +490,10 @@ void cSampleEditor::update()
 
 void cSampleEditor::stop()
 {
+    if (keyboardManager.getState())
+    {
+        keyboardManager.deactivateKeyboard();
+    }
     moduleRefresh = 0;
     if (!avoidStop)
     {
@@ -1128,6 +1132,22 @@ void cSampleEditor::reloadParameterValueText(uint8_t idx)
         return;
     }
 
+    if (params.displayType[idx] == 't')
+    {
+        const char* curText = PtfxLoader::getSelectedFilePath(idx);
+        if (curText != nullptr && curText[0] != '\0')
+        {
+            strncpy(parameterFileText[idx], curText, sizeof(parameterFileText[idx]) - 1);
+            parameterFileText[idx][sizeof(parameterFileText[idx]) - 1] = '\0';
+        }
+        else
+        {
+            parameterFileText[idx][0] = '\0';
+        }
+        strcpy(parameterValueLabelPtr[idx], "Edit...");
+        return;
+    }
+
     if (params.displayType[idx] == 'w' || params.displayType[idx] == 's')
     {
         const char* fullPath = PtfxLoader::getSelectedFilePath(idx);
@@ -1589,6 +1609,32 @@ void cSampleEditor::modParameter(int16_t value, uint8_t idx)
     refreshParameter(idx);
 }
 
+static const char* getModularTextParamDefault(const PtfxHeader& header, uint8_t idx)
+{
+    if (idx >= header.num_params || header.params[idx].display_type != PARAM_TEXT)
+    {
+        return "";
+    }
+    const PtfxParamDef& p = header.params[idx];
+    uint16_t textOffset =
+      (uint16_t)((uint8_t)p.unit[0] | ((uint16_t)(uint8_t)p.unit[1] << 8));
+    uint8_t* codeBuf = PtfxLoader::getCodeBuffer();
+    if (codeBuf == nullptr || textOffset >= header.code_size)
+    {
+        return "";
+    }
+    const char* strPtr = reinterpret_cast<const char*>(codeBuf + textOffset);
+    uint32_t maxLen = header.code_size - textOffset;
+    for (uint32_t i = 0; i < maxLen; i++)
+    {
+        if (strPtr[i] == '\0')
+        {
+            return strPtr;
+        }
+    }
+    return "";
+}
+
 void cSampleEditor::setDefaultParameter(uint8_t idx)
 {
     if (currentEffectIdx == editorEffectModular)
@@ -1596,8 +1642,17 @@ void cSampleEditor::setDefaultParameter(uint8_t idx)
         const PtfxHeader& header = PtfxManager::getActiveHeader();
         if (idx < header.num_params)
         {
-            if (header.params[idx].display_type == PARAM_FILE ||
-                header.params[idx].display_type == PARAM_SAVE_FILE)
+            if (header.params[idx].display_type == PARAM_TEXT)
+            {
+                const char* defText = getModularTextParamDefault(header, idx);
+                PtfxLoader::setSelectedFilePath(idx, defText);
+                strncpy(parameterFileText[idx], defText, sizeof(parameterFileText[idx]) - 1);
+                parameterFileText[idx][sizeof(parameterFileText[idx]) - 1] = '\0';
+                effectDisplayParamsToAdjust[currentEffectIdx].parameter[idx] =
+                  (defText[0] != '\0') ? 1.0f : 0.0f;
+            }
+            else if (header.params[idx].display_type == PARAM_FILE ||
+                     header.params[idx].display_type == PARAM_SAVE_FILE)
             {
                 PtfxLoader::setSelectedFilePath(idx, "");
                 parameterFileText[idx][0] = '\0';
@@ -1826,6 +1881,12 @@ static void functMiniMiddle(uint8_t state)
 
 static void functPads(uint8_t pad, uint8_t state, [[maybe_unused]] int16_t velo)
 {
+    if (SE->keyboardManager.getState())
+    {
+        SE->keyboardManager.onPadChange(pad, state);
+        return;
+    }
+
     if (SE->screenType != cSampleEditor::enScreenType::mainScreen)
     {
         return;
@@ -2473,13 +2534,159 @@ static void openModularParamFileBrowser(int paramIdx)
     openGlobalFileBrowser(cfg);
 }
 
+static int s_editingTextParamIdx = -1;
+
+static void functTextParamLeft()
+{
+    SE->keyboardManager.makeMove('a');
+}
+static void functTextParamRight()
+{
+    SE->keyboardManager.makeMove('d');
+}
+static void functTextParamUp()
+{
+    SE->keyboardManager.makeMove('w');
+}
+static void functTextParamDown()
+{
+    SE->keyboardManager.makeMove('s');
+}
+static void functTextParamEncoder(int16_t value)
+{
+    if (value < 0)
+        SE->keyboardManager.makeMove('a');
+    else if (value > 0)
+        SE->keyboardManager.makeMove('d');
+}
+static void functTextParamEnter()
+{
+    SE->keyboardManager.confirmKey();
+}
+static void functTextParamBackspace()
+{
+    SE->keyboardManager.makeBackspace();
+}
+static void functTextParamClear()
+{
+    SE->keyboardManager.fillName("");
+    const PtfxHeader& header = PtfxManager::getActiveHeader();
+    uint8_t maxLen = 64;
+    if (s_editingTextParamIdx >= 0 && s_editingTextParamIdx < header.num_params)
+    {
+        uint8_t ml = (uint8_t)header.params[s_editingTextParamIdx].unit[2];
+        if (ml > 0 && ml < MAX_NAME_LENGTH)
+            maxLen = ml;
+    }
+    SE->keyboardManager.activateKeyboard(maxLen);
+    SE->keyboardManager.makeMove('s');
+}
+static void functTextParamCancel()
+{
+    SE->keyboardManager.deactivateKeyboard();
+    s_editingTextParamIdx = -1;
+    SE->setCommonFunctions();
+    SE->reloadFrameData(cSampleEditor::effectScreen);
+    SE->showEffectParamsScreen();
+    SE->setParamsScreenFunctions();
+}
+static void functTextParamConfirm()
+{
+    int paramIdx = s_editingTextParamIdx;
+    const char* newText = SE->keyboardManager.getName();
+    SE->keyboardManager.deactivateKeyboard();
+    s_editingTextParamIdx = -1;
+
+    if (paramIdx >= 0 && paramIdx < kMaxParametersInEffect &&
+        SE->currentEffectIdx == editorEffectModular)
+    {
+        PtfxLoader::setSelectedFilePath(static_cast<uint8_t>(paramIdx), newText);
+        float val = (newText != nullptr && newText[0] != '\0') ? 1.0f : 0.0f;
+        SE->effectDisplayParamsToAdjust[editorEffectModular].parameter[paramIdx] = val;
+        SE->currentEffect->setParameter(val, static_cast<uint8_t>(paramIdx));
+        SE->reloadParameterValueText(static_cast<uint8_t>(paramIdx));
+        SE->reloadParameterBarValue(static_cast<uint8_t>(paramIdx));
+        SE->setPreviewFunction();
+        SE->currentEffect->clearProcessedData();
+    }
+
+    SE->setCommonFunctions();
+    SE->reloadFrameData(cSampleEditor::effectScreen);
+    SE->showEffectParamsScreen();
+    SE->setParamsScreenFunctions();
+}
+
+void cSampleEditor::setTextParamKeyboardFunctions()
+{
+    ip->clearButtonsRange(interfaceButton0, interfaceButton7);
+    ip->clearButton(interfaceButtonLeft);
+    ip->clearButton(interfaceButtonRight);
+    ip->clearButton(interfaceButtonUp);
+    ip->clearButton(interfaceButtonDown);
+    ip->clearButton(interfaceButtonDelete);
+    ip->clearButton(interfaceButtonInsert);
+    ip->clearAllPots();
+
+    ip->setPadsGlobal(functPads);
+    ip->setButtonObj(interfaceButtonMiniMiddle, buttonPress, functTextParamEnter);
+    ip->setButtonObj(interfaceButtonShift, buttonPress, functTextParamEnter);
+    ip->setButtonObj(interfaceButtonLeft, buttonPress, functTextParamLeft);
+    ip->setButtonObj(interfaceButtonRight, buttonPress, functTextParamRight);
+    ip->setButtonObj(interfaceButtonUp, buttonPress, functTextParamUp);
+    ip->setButtonObj(interfaceButtonDown, buttonPress, functTextParamDown);
+    ip->setButtonObj(interfaceButtonDelete, buttonPress, functTextParamBackspace);
+    ip->setButtonObj(interfaceButtonInsert, buttonPress, functTextParamEnter);
+    ip->setButtonObj(interfaceButton0, buttonPress, functTextParamEnter);
+    ip->setButtonObj(interfaceButton1, buttonPress, functTextParamClear);
+    ip->setButtonObj(interfaceButton6, buttonPress, functTextParamCancel);
+    ip->setButtonObj(interfaceButton7, buttonPress, functTextParamConfirm);
+    ip->setPotObj(interfacePot0, functTextParamEncoder);
+}
+
+void cSampleEditor::openModularParamTextKeyboard(int paramIdx)
+{
+    if (currentEffectIdx != editorEffectModular || paramIdx < 0 ||
+        paramIdx >= kMaxParametersInEffect)
+    {
+        return;
+    }
+    const auto& params = getCurrentEffectDisplayParams();
+    if (params.displayType == nullptr || paramIdx >= params.paramsNumber ||
+        params.displayType[paramIdx] != 't')
+    {
+        return;
+    }
+
+    const PtfxHeader& header = PtfxManager::getActiveHeader();
+    uint8_t maxLen = 64;
+    if (paramIdx < header.num_params)
+    {
+        uint8_t ml = (uint8_t)header.params[paramIdx].unit[2];
+        if (ml > 0 && ml < MAX_NAME_LENGTH)
+            maxLen = ml;
+    }
+
+    s_editingTextParamIdx = paramIdx;
+    const char* curText = PtfxLoader::getSelectedFilePath(static_cast<uint8_t>(paramIdx));
+    keyboardManager.fillName(curText);
+    keyboardManager.activateKeyboard(maxLen);
+    showTextParamKeyboard();
+    setTextParamKeyboardFunctions();
+}
+
 static void functParamsScreenInsert()
 {
     if (SE->isModularPresetPage())
     {
         return;
     }
-    openModularParamFileBrowser(SE->getSelectedParameterIdx());
+    int idx = SE->getSelectedParameterIdx();
+    if (SE->isParameterText(static_cast<uint8_t>(idx)))
+    {
+        SE->openModularParamTextKeyboard(idx);
+        return;
+    }
+    openModularParamFileBrowser(idx);
 }
 
 static void functParamsScreenMore()
@@ -2521,6 +2728,13 @@ static void functSelectParameter(uint8_t button)
       (params.displayType != nullptr && targetParamIdx >= 0 && targetParamIdx < params.paramsNumber)
         ? params.displayType[targetParamIdx]
         : '\0';
+    if (dt == 't')
+    {
+        SE->selectedPlace[cSampleEditor::effectScreen] = button;
+        SE->showFrame();
+        SE->openModularParamTextKeyboard(targetParamIdx);
+        return;
+    }
     if (dt == 'w' || dt == 's')
     {
         SE->selectedPlace[cSampleEditor::effectScreen] = button;
@@ -2830,7 +3044,7 @@ void cSampleEditor::openModularPresetLoadBrowser()
                         val = 0.0f;
                     }
                 }
-                else if (dt == 's')
+                else if (dt == 's' || dt == 't')
                 {
                     const char* fp = PtfxLoader::getSelectedFilePath(i);
                     val = (fp != nullptr && fp[0] != '\0') ? 1.0f : 0.0f;
@@ -2918,7 +3132,8 @@ void cSampleEditor::openModularPresetSaveBrowser()
         {
             hdr.params[i] = savedParams[i];
             if (i < hdr.numParams && curParams.displayType != nullptr &&
-                (curParams.displayType[i] == 'w' || curParams.displayType[i] == 's'))
+                (curParams.displayType[i] == 'w' || curParams.displayType[i] == 's' ||
+                 curParams.displayType[i] == 't'))
             {
                 const char* fp = PtfxLoader::getSelectedFilePath(i);
                 if (fp != nullptr && fp[0] != '\0')
@@ -2988,11 +3203,18 @@ void cSampleEditor::resetModularEffectParams()
 
     for (uint8_t i = 0; i < count; i++)
     {
-        float defVal =
-          (header.params[i].display_type == PARAM_FILE ||
-           header.params[i].display_type == PARAM_SAVE_FILE)
-            ? 0.0f
-            : header.params[i].default_val;
+        float defVal = header.params[i].default_val;
+        if (header.params[i].display_type == PARAM_TEXT)
+        {
+            const char* defText = getModularTextParamDefault(header, i);
+            PtfxLoader::setSelectedFilePath(i, defText);
+            defVal = (defText[0] != '\0') ? 1.0f : 0.0f;
+        }
+        else if (header.params[i].display_type == PARAM_FILE ||
+                 header.params[i].display_type == PARAM_SAVE_FILE)
+        {
+            defVal = 0.0f;
+        }
         effectDisplayParamsToAdjust[editorEffectModular].parameter[i] = defVal;
         currentEffect->setParameter(defVal, i);
         reloadParameterValueText(i);
@@ -3096,7 +3318,7 @@ static void functPlay()
     }
 
     mtPadBoard.startNoteWithoutInstrument(
-      60,
+      60 + SE->editorInstrument->tuneResample,
       addresses,
       SE->currentEffect->getSampleLengthToPreview(),
       vol,
@@ -3345,6 +3567,25 @@ void cSampleEditor::loadModularEffectUI(const PtfxHeader& header)
             s_modularDisplayMult[i] = 1.0f;
             s_modularDisplayType[i] = (validItems > 0) ? 'l' : 'd';
         }
+        else if (p.display_type == PARAM_TEXT)
+        {
+            s_modularUnits[i] = nullptr;
+            s_modularUpConstrain[i] = 1.0f;
+            s_modularDownConstrain[i] = 0.0f;
+            s_modularChangeStep[i] = 0.0f;
+            s_modularDisplayMult[i] = 1.0f;
+            s_modularDisplayType[i] = 't';
+
+            const char* curText = PtfxLoader::getSelectedFilePath(i);
+            if (curText == nullptr || curText[0] == '\0')
+            {
+                const char* defText = getModularTextParamDefault(header, i);
+                if (defText[0] != '\0')
+                {
+                    PtfxLoader::setSelectedFilePath(i, defText);
+                }
+            }
+        }
         else if (p.display_type == PARAM_FILE || p.display_type == PARAM_SAVE_FILE)
         {
             strncpy(s_modularUnitStorage[i], p.unit, sizeof(s_modularUnitStorage[i]) - 1);
@@ -3408,6 +3649,14 @@ bool cSampleEditor::isParameterFile(uint8_t paramIdx) const
     if (paramIdx >= params.paramsNumber || params.displayType == nullptr)
         return false;
     return params.displayType[paramIdx] == 'w' || params.displayType[paramIdx] == 's';
+}
+
+bool cSampleEditor::isParameterText(uint8_t paramIdx) const
+{
+    const auto& params = getCurrentEffectDisplayParams();
+    if (paramIdx >= params.paramsNumber || params.displayType == nullptr)
+        return false;
+    return params.displayType[paramIdx] == 't';
 }
 
 const char* cSampleEditor::getParameterFileText(uint8_t paramIdx) const

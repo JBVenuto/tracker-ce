@@ -12,6 +12,7 @@
 #include "mtPadsBacklight.h"
 #include "mtStructs.h"
 #include "util_math.h"
+#include <algorithm>
 
 cSongEditor songEditor;
 
@@ -1007,8 +1008,8 @@ void cSongEditor::readSong()
     }
     patternsList.start = selectedSongPosition;
 
-    songPlayerData.normalTracksCount = kSampleTracks;
-    songPlayerData.midiTracksCount = kMidiTracks;
+    songPlayerData.normalTracksCount = getProjectActiveSampleTracks();
+    songPlayerData.midiTracksCount = getProjectActiveMidiTracks();
     songPlayerData.normalTracksNames = &mtProject.values.TrackNames[0][0];
     songPlayerData.midiTracksNames = &mtProject.values.midiTrackNames[0][0];
     songPlayerData.normalTracksNamesBuffLen = 21;
@@ -1022,7 +1023,55 @@ void cSongEditor::readSong()
     songPlayerData.isListActive = 1;
     songPlayerData.isEditMode = &editMode;
 
+    const uint8_t maxTracks = getProjectMaxTracks();
+    if (songPlayerData.selection.startTrack >= maxTracks)
+    {
+        songPlayerData.selection.startTrack = maxTracks - 1;
+    }
+    const uint8_t remainingTracks = maxTracks - songPlayerData.selection.startTrack;
+    if (songPlayerData.selection.trackSelectionLength > remainingTracks)
+    {
+        songPlayerData.selection.trackSelectionLength = remainingTracks;
+    }
+    if (songPlayerData.selection.trackSelectionLength == 0)
+    {
+        songPlayerData.selection.trackSelectionLength = 1;
+    }
+
     display.setControlData(songPlayerControl, &songPlayerData);
+}
+
+void cSongEditor::onMaxTracksChanged(uint8_t maxTracks)
+{
+    songPlayerData.normalTracksCount = getProjectActiveSampleTracks();
+    songPlayerData.midiTracksCount = getProjectActiveMidiTracks();
+
+    if (songPlayerData.selection.startTrack >= maxTracks)
+    {
+        songPlayerData.selection.startTrack = maxTracks - 1;
+    }
+    const uint8_t remainingTracks = maxTracks - songPlayerData.selection.startTrack;
+    if (songPlayerData.selection.trackSelectionLength > remainingTracks)
+    {
+        songPlayerData.selection.trackSelectionLength = remainingTracks;
+    }
+    if (songPlayerData.selection.trackSelectionLength == 0)
+    {
+        songPlayerData.selection.trackSelectionLength = 1;
+    }
+
+    if (isSomethingCopied &&
+        (copyCurrentData.startTrack + copyCurrentData.trackSelectionLength > maxTracks))
+    {
+        isSomethingCopied = 0;
+        copyCurrentData.patternSelectionLength = 0;
+    }
+
+    if (songPlayerData.progress.trackPreview < kAllTracks &&
+        songPlayerData.progress.trackPreview >= maxTracks)
+    {
+        songPlayerData.progress.trackPreview = 255;
+    }
 }
 
 void cSongEditor::refreshPatternsList()
@@ -1404,7 +1453,9 @@ void cSongEditor::walkOnSongPlayer(player_direction_t dir)
 
                 if ((currSelDirection & selDirRight) || (currSelDirection == 0))
                 {
-                    if (songPlayerData.selection.trackSelectionLength < allTracksCount)
+                    if (songPlayerData.selection.startTrack +
+                          songPlayerData.selection.trackSelectionLength <
+                        allTracksCount)
                     {
                         songPlayerData.selection.trackSelectionLength++;
                     }

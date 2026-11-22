@@ -139,12 +139,33 @@ void changeMixerOnMidiCC(uint8_t cc_idx, uint8_t cc_value);
 
 static elapsedMillis refreshTimer;
 
+void cMasterParams::onMaxTracksChanged(uint8_t maxTracks)
+{
+    (void)maxTracks;
+    const uint8_t activeSampleTracks = getProjectActiveSampleTracks();
+
+    if (soloTrack >= static_cast<int8_t>(activeSampleTracks) && soloTrack < kSampleTracks)
+    {
+        soloTrack = -1;
+    }
+
+    for (uint8_t i = activeSampleTracks; i < kSampleTracks; i++)
+    {
+        trackIsEdited[i] = false;
+        ignoreMuteRelease[i] = false;
+    }
+
+    rebuildLimiterSidechainList();
+    engine.setLimiterSidechain(getEffectiveLimiterSidechain());
+}
+
 void cMasterParams::update()
 {
 
     if (displayType == displayMode::mixer && !keyboardManager.getState())
     {
-        for (uint8_t i = 0; i < 8; i++)
+        const uint8_t activeSampleTracks = getProjectActiveSampleTracks();
+        for (uint8_t i = 0; i < activeSampleTracks; i++)
         {
             calcTrackLevel(i);
         }
@@ -173,7 +194,8 @@ void cMasterParams::update()
 
     if (displayType == displayMode::mixer && !keyboardManager.getState())
     {
-        for (uint8_t i = 0; i < 8; i++)
+        const uint8_t activeSampleTracks = getProjectActiveSampleTracks();
+        for (uint8_t i = 0; i < activeSampleTracks; i++)
         {
             if (trackLevel[i].value != trackLevel[i].lastValue)
             {
@@ -458,7 +480,8 @@ static void functEncoder(int16_t value)
 
     if (MP->displayType == cMasterParams::displayMode::mixer)
     {
-        for (uint8_t track = 0; track < 8; track++)
+        const uint8_t activeSampleTracks = getProjectActiveSampleTracks();
+        for (uint8_t track = 0; track < activeSampleTracks; track++)
         {
             if (MP->trackIsEdited[track])
             {
@@ -696,7 +719,8 @@ static void functUp()
 {
     if (MP->displayType == cMasterParams::displayMode::mixer)
     {
-        for (uint8_t track = 0; track < 8; track++)
+        const uint8_t activeSampleTracks = getProjectActiveSampleTracks();
+        for (uint8_t track = 0; track < activeSampleTracks; track++)
         {
             if (MP->trackIsEdited[track])
             {
@@ -801,7 +825,8 @@ static void functDown()
 {
     if (MP->displayType == cMasterParams::displayMode::mixer)
     {
-        for (uint8_t track = 0; track < 8; track++)
+        const uint8_t activeSampleTracks = getProjectActiveSampleTracks();
+        for (uint8_t track = 0; track < activeSampleTracks; track++)
         {
             if (MP->trackIsEdited[track])
             {
@@ -905,7 +930,8 @@ static void functDelete()
 {
     if (MP->displayType == cMasterParams::displayMode::mixer)
     {
-        for (uint8_t track = 0; track < 8; track++)
+        const uint8_t activeSampleTracks = getProjectActiveSampleTracks();
+        for (uint8_t track = 0; track < activeSampleTracks; track++)
         {
             if (MP->trackIsEdited[track])
             {
@@ -1492,13 +1518,17 @@ static void functSelectLimiterSidechain()
 {
     if (MP->selectedPlaceLimiter == 4) // zmienianie pozycji listy przyciskiem pod ekranem
     {
-        mtProject.values.limiterSidechain++;
-        if (mtProject.values.limiterSidechain > LIMITER_SIDECHAIN_MAX)
-            mtProject.values.limiterSidechain = LIMITER_SIDECHAIN_MIN;
+        if (MP->limiterSidechainVisibleCount > 0)
+        {
+            uint8_t visibleIdx =
+              MP->getLimiterSidechainVisibleIdx(MP->getEffectiveLimiterSidechain());
+            visibleIdx = (visibleIdx + 1) % MP->limiterSidechainVisibleCount;
+            mtProject.values.limiterSidechain = MP->limiterSidechainVisibleValues[visibleIdx];
 
-        engine.setLimiterSidechain(mtProject.values.limiterSidechain);
-        newFileManager.setProjectStructChanged();
-        MP->showLimiterSidechain();
+            engine.setLimiterSidechain(MP->getEffectiveLimiterSidechain());
+            newFileManager.setProjectStructChanged();
+            MP->showLimiterSidechain();
+        }
         return;
     }
 
@@ -1776,6 +1806,12 @@ static void functSoloMuteTrack(uint8_t n, uint8_t state)
         return;
     }
 
+    const uint8_t activeSampleTracks = getProjectActiveSampleTracks();
+    if (n >= activeSampleTracks)
+    {
+        return;
+    }
+
     if (state == buttonRelease)
     {
         if (MP->editTrackNameMode)
@@ -1795,14 +1831,14 @@ static void functSoloMuteTrack(uint8_t n, uint8_t state)
             if ((uint8_t)MP->soloTrack == n)
             {
                 MP->soloTrack = -1;
-                for (uint8_t i = 0; i < 8; i++)
+                for (uint8_t i = 0; i < activeSampleTracks; i++)
                 {
                     mtProject.values.trackMute[i] = 0;
                 }
             }
             else
             {
-                for (uint8_t i = 0; i < 8; i++)
+                for (uint8_t i = 0; i < activeSampleTracks; i++)
                 {
                     mtProject.values.trackMute[i] = 1;
                 }
@@ -1816,7 +1852,7 @@ static void functSoloMuteTrack(uint8_t n, uint8_t state)
             MP->soloTrack = -1;
         }
 
-        for (uint8_t i = 0; i < 8; i++)
+        for (uint8_t i = 0; i < activeSampleTracks; i++)
         {
             engine.muteTrack(i, mtProject.values.trackMute[i]);
             MP->showLevelBar(i, &MP->trackLevel[i]);
@@ -2284,14 +2320,19 @@ void changeLimiterTreshold(int16_t value)
 
 void changeLimiterSidechain(int16_t value)
 {
-    if (mtProject.values.limiterSidechain + value < LIMITER_SIDECHAIN_MIN)
-        mtProject.values.limiterSidechain = LIMITER_SIDECHAIN_MIN;
-    else if (mtProject.values.limiterSidechain + value > LIMITER_SIDECHAIN_MAX)
-        mtProject.values.limiterSidechain = LIMITER_SIDECHAIN_MAX;
-    else
-        mtProject.values.limiterSidechain += value;
+    if (MP->limiterSidechainVisibleCount == 0)
+    {
+        return;
+    }
 
-    engine.setLimiterSidechain(mtProject.values.limiterSidechain);
+    const int maxIdx = static_cast<int>(MP->limiterSidechainVisibleCount) - 1;
+    int visibleIdx =
+      static_cast<int>(MP->getLimiterSidechainVisibleIdx(MP->getEffectiveLimiterSidechain())) +
+      static_cast<int>(value);
+    visibleIdx = clamp<int>(visibleIdx, 0, maxIdx);
+    mtProject.values.limiterSidechain = MP->limiterSidechainVisibleValues[visibleIdx];
+
+    engine.setLimiterSidechain(MP->getEffectiveLimiterSidechain());
 
     newFileManager.setProjectStructChanged();
 
@@ -3083,6 +3124,11 @@ void changeMixerOnMidiCC(uint8_t cc_idx, uint8_t cc_value)
         return;
 
     uint8_t ccToIdx = cc_idx - MIXER_CC_RANGE_MIN;
+
+    if (ccToIdx < kSampleTracks && ccToIdx >= getProjectActiveSampleTracks())
+    {
+        return;
+    }
 
     *(indexedMixerValues[ccToIdx]) = ((uint16_t)(cc_value * 100)) / 127;
 

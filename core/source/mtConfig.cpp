@@ -328,6 +328,16 @@ void checkConfig()
         mtConfig.midi.ccInChannel = 0;
     }
 
+    if (mtConfig.midi.programChangeInMode > 3)
+    {
+        mtConfig.midi.programChangeInMode = 0;
+    }
+
+    if (mtConfig.midi.programChangeInChannel > 16)
+    {
+        mtConfig.midi.programChangeInChannel = 0;
+    }
+
     if (mtConfig.midi.middleC > 3)
     {
         mtConfig.midi.middleC = 2;
@@ -521,6 +531,8 @@ void resetConfig()
     mtConfig.midi.ccInChannel = 0;
     mtConfig.midi.middleC = 2;
     mtConfig.midi.slaveClockComp = kExternalClockCompDefaultVal;
+    mtConfig.midi.programChangeInMode = 0;
+    mtConfig.midi.programChangeInChannel = 0;
 
     // values ----------------------------------------
     mtConfig.values.padsLightBack = PADS_LIGHT_BACK_DEFAULT;

@@ -176,7 +176,10 @@ void mtAudioExport::start(const char* path, uint8_t mode)
     for (uint8_t stemIdx = 0; stemIdx < stem_totalCount; stemIdx++)
     {
         if (!isStemActive(stemIdx))
+        {
+            stemsPaths[stemIdx][0] = 0;
             continue;
+        }
 
         maxStemInCurrentExport = stemIdx;
 
@@ -302,7 +305,11 @@ bool mtAudioExport::isStemActive(int stemIdx)
         case enExportType::exportPatternStems:
         {
             assert(stemIdx < stem_totalCount);
-            return true; // all stems are active
+            if (stemIdx >= stem_tracks_start && stemIdx <= stem_track_8)
+            {
+                return stemIdx < getProjectActiveSampleTracks();
+            }
+            return true; // all remaining stems are active
         }
         case enExportType::exportSong:
         case enExportType::exportPattern:
@@ -328,8 +335,14 @@ void mtAudioExport::saveMasterBufferToSD(uint8_t closeFile)
     if (blocksBuffered >= maxBlocksForStem)
         blocksBuffered = maxBlocksForStem;
 
-    [[maybe_unused]] auto [isOpen, fileHandle] = fileSystem->openFile(
-      stemsPaths[stem_master], FileSystem::FileOpenMode::kWriteCreateNew, &wavStemsFile);
+    // Only the first flush may create the file. Creating it again truncates it, and what
+    // the earlier flushes wrote then depends on the card handing out the same clusters.
+    const FileSystem::FileOpenMode openMode = (bytesWrittenInStem[stem_master] == 0)
+                                                ? FileSystem::FileOpenMode::kWriteCreateNew
+                                                : FileSystem::FileOpenMode::kWriteOpen;
+
+    [[maybe_unused]] auto [isOpen, fileHandle] =
+      fileSystem->openFile(stemsPaths[stem_master], openMode, &wavStemsFile);
 
     if (blocksBuffered > 0)
     {
@@ -457,6 +470,10 @@ void mtAudioExport::update()
 void mtAudioExport::rawToWavs_init()
 {
     raw.stemIndex = 0;
+    while (raw.stemIndex < stem_totalCount && !isStemActive(raw.stemIndex))
+    {
+        raw.stemIndex++;
+    }
     raw.currentMultipacket = 0;
     raw.totalPacketProcessed = 0;
 
@@ -468,6 +485,10 @@ void mtAudioExport::rawToWavs_init()
 
 void mtAudioExport::rawToWavs_startWav()
 {
+    while (raw.stemIndex < stem_totalCount && !isStemActive(raw.stemIndex))
+    {
+        raw.stemIndex++;
+    }
 
     if (raw.stemIndex < stem_totalCount)
     {
@@ -481,7 +502,7 @@ void mtAudioExport::rawToWavs_startWav()
     }
     else
     {
-        handleError(1);
+        status = statusRawToWavs_finish;
     }
 }
 void mtAudioExport::rawToWavs_update()
@@ -533,6 +554,10 @@ void mtAudioExport::rawToWavs_update()
         fileSystem->closeFile(wavStemsFile, false);
 
         raw.stemIndex++;
+        while (raw.stemIndex < stem_totalCount && !isStemActive(raw.stemIndex))
+        {
+            raw.stemIndex++;
+        }
         if (raw.stemIndex >= stem_totalCount)
         {
             status = statusRawToWavs_finish;
@@ -739,7 +764,7 @@ void mtAudioExport::cancel()
 
     for (uint8_t tr = 0; tr < stem_totalCount; tr++)
     {
-        if (fileSystem->exists(stemsPaths[tr]))
+        if (isStemActive(tr) && stemsPaths[tr][0] != 0 && fileSystem->exists(stemsPaths[tr]))
             fileSystem->remove(stemsPaths[tr]);
     }
     if (fileSystem->exists(stemsRawPath))
@@ -762,7 +787,20 @@ float mtAudioExport::getRawToWavProgress()
      * raw.stemIndex
      */
 
-    float totalPacketsToSave = multipacketsInRawTotal * stem_totalCount;
+    uint8_t activeStemCount = 0;
+    for (uint8_t tr = 0; tr < stem_totalCount; tr++)
+    {
+        if (isStemActive(tr))
+        {
+            activeStemCount++;
+        }
+    }
+
+    float totalPacketsToSave = multipacketsInRawTotal * activeStemCount;
+    if (totalPacketsToSave <= 0.0f)
+    {
+        return 100.0f;
+    }
 
     return ((float)raw.totalPacketProcessed * 100) / totalPacketsToSave;
 }

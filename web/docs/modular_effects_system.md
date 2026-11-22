@@ -18,6 +18,7 @@ This guide covers everything needed to use, author, compile, and understand cust
    - [Integer Bar (`PTFX_PARAM_INT`)](#2-integer-bar-ptfx_param_int)
    - [Scrollable String List (`PTFX_PARAM_LIST`)](#3-scrollable-string-list-ptfx_param_list)
    - [File Picker & Save-File Parameters (`PTFX_PARAM_FILE` / `PTFX_PARAM_SAVE_FILE`)](#4-file-picker--save-file-parameters-ptfx_param_file--ptfx_param_save_file)
+   - [Editable Text Parameter (`PTFX_PARAM_TEXT`)](#5-editable-text-parameter-ptfx_param_text)
 6. [Host API Reference (`PtfxHostApi`)](#6-host-api-reference-ptfxhostapi)
 7. [Plugin Lifecycle & Audio Processing Patterns](#7-plugin-lifecycle--audio-processing-patterns)
    - [Lifecycle Order](#71-lifecycle-order)
@@ -43,7 +44,7 @@ This guide covers everything needed to use, author, compile, and understand cust
 
 The **Modular Effects System (`PTFX`)** introduces dynamically loadable DSP and synthesis plugins for the Polyend Tracker family across all three hardware platforms:
 
-- **Original Polyend Tracker** - NXP Kinetis MK66 (`ARM Cortex-M4F` @ 180 MHz, mono sample engine)
+- **Original Polyend Tracker** - NXP Kinetis MK66 (`ARM Cortex-M4F` @ 180 MHz, stereo sample engine)
 - **Polyend Tracker+** - NXP i.MX RT1051/RT1064 (`ARM Cortex-M7F` @ 600 MHz, stereo sample engine)
 - **Polyend Tracker Mini** - NXP i.MX RT1051/RT1064 (`ARM Cortex-M7F` @ 600 MHz, stereo sample engine)
 
@@ -71,16 +72,17 @@ SD Card Root/
 
 All plugins in [`editor-fx-sdk/effects/`](../editor-fx-sdk/effects) can be compiled locally via `make ptfx` (outputting to `editor-fx-sdk/build/Effects/*.ptfx`) or downloaded ready-to-use from the **`polyend-tracker-ce-effects`** GitHub Actions build artifact:
 
-| Plugin Source | Display Name | Capability Flags | Scratch RAM | Parameters & Description |
-| :--- | :--- | :--- | :--- | :--- |
-| [`add_silence.c`](../editor-fx-sdk/effects/add_silence.c) | `Add Silence` | `EFFECT \| STEREO` | `0 B` | `Where` (List: `Beginning\|End`), `Length` (`10–5000 ms`, default `2500 ms`). Prepends or appends silence via `host->set_extra_samples()`. |
-| [`analog_kick_gen.c`](../editor-fx-sdk/effects/analog_kick_gen.c) | `Analog Kick Gen` | `GENERATOR` | `0 B` | `TopFreq` (`60–250 Hz`), `SubFreq` (`30–80 Hz`), `Decay` (`100–900 ms`), `Click` (`0.0–1.0`). Synthesizes analog-style kick drums onto any slot. |
-| [`chiptune_gen.c`](../editor-fx-sdk/effects/chiptune_gen.c) | `Chiptune Voice Gen` | `GENERATOR` | `0 B` | `Voice` (List: `Kick\|Snare\|HiHat\|Pulse12\|Pulse25\|Pulse50\|Triangle\|NESNoise`), `Note` (`24–84 st`), `Arp` (List), `Speed` (`10–60 Hz`), `Decay` (`30–1500 ms`), `Sweep` (`-24..+24 st`), `Crush` (List), `Length` (List: `DecayLen\|SingleCyc`). |
-| [`cross_mod.c`](../editor-fx-sdk/effects/cross_mod.c) | `Sample Cross-Mod` | `EFFECT \| STEREO` | `0 B` | `Mod WAV` (File `.wav`), `Mode` (List: `Layer Mix\|Ring Mod\|FM Scrub\|Amp Follow\|Sidechain`), `Pitch` (`-24..+24 st`), `Mix` (`0–100 %`). Cross-modulates or layers the sample with a secondary `.wav` file from SD. |
-| [`haas.c`](../editor-fx-sdk/effects/haas.c) | `Haas Effect` | `EFFECT \| STEREO` | `8,820 B` | `Delay` (`1–100 ms`, default `10 ms`), `Chan` (List: `Left\|Right`). Psychoacoustic stereo Haas widener delaying L or R channel with appended tail fade-out. |
-| [`multimode_filter.c`](../editor-fx-sdk/effects/multimode_filter.c) | `Multi-Mode Filter` | `EFFECT \| STEREO` | `0 B` | `Mode` (List: `LPF 24dB\|LPF 12dB\|BPF 12dB\|HPF 12dB\|Notch\|Peak`), `Cutoff` (`40–16000 Hz`), `Reso` (`0–95 %`), `Drive` (List: `Clean\|SoftSat\|WarmTube\|HardClip\|Foldback`). Zero-delay feedback Cytomic SVF filter. |
-| [`stereo_delay.c`](../editor-fx-sdk/effects/stereo_delay.c) | `Stereo Delay` | `EFFECT \| STEREO` | `176,404 B` | `Time` (`10–1000 ms`), `Fdbk` (`0–95 %`), `Mix` (`0–100 %`), `Tail` (List: `Ring Out\|Cut Off`). Stereo delay line with optional tail ring-out. |
-| [`stereo_to_mono.c`](../editor-fx-sdk/effects/stereo_to_mono.c) | `Stereo to Mono` | `STEREO \| CONVERT_TO_MONO` | `0 B` | `Source` (List: `Merge L+R\|Left Only\|Right Only\|Side L-R`), `Gain` (`-12.0 to +6.0 dB`). Converts a stereo sample on Tracker+ / Mini into a true mono sample, reclaiming 50% sample RAM. |
+| Plugin Source                                                       | Display Name         | Capability Flags            | Scratch RAM | Parameters & Description                                                                                                                                                                                                                                        |
+| :------------------------------------------------------------------ | :------------------- | :-------------------------- | :---------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`add_silence.c`](../editor-fx-sdk/effects/add_silence.c)           | `Add Silence`        | `EFFECT \| STEREO`          | `0 B`       | `Where` (List: `Beginning\|End`), `Length` (`10–5000 ms`, default `2500 ms`). Prepends or appends silence via `host->set_extra_samples()`.                                                                                                                      |
+| [`analog_kick_gen.c`](../editor-fx-sdk/effects/analog_kick_gen.c)   | `Analog Kick Gen`    | `GENERATOR`                 | `0 B`       | `TopFreq` (`60–250 Hz`), `SubFreq` (`30–80 Hz`), `Decay` (`100–900 ms`), `Click` (`0.0–1.0`). Synthesizes analog-style kick drums onto any slot.                                                                                                                |
+| [`chiptune_gen.c`](../editor-fx-sdk/effects/chiptune_gen.c)         | `Chiptune Voice Gen` | `GENERATOR`                 | `0 B`       | `Voice` (List: `Kick\|Snare\|HiHat\|Pulse12\|Pulse25\|Pulse50\|Triangle\|NESNoise`), `Note` (`24–84 st`), `Arp` (List), `Speed` (`10–60 Hz`), `Decay` (`30–1500 ms`), `Sweep` (`-24..+24 st`), `Crush` (List), `Length` (List: `DecayLen\|SingleCyc`).          |
+| [`cross_mod.c`](../editor-fx-sdk/effects/cross_mod.c)               | `Sample Cross-Mod`   | `EFFECT \| STEREO`          | `0 B`       | `Mod WAV` (File `.wav`), `Mode` (List: `Layer Mix\|Ring Mod\|FM Scrub\|Amp Follow\|Sidechain`), `Pitch` (`-24..+24 st`), `Mix` (`0–100 %`). Cross-modulates or layers the sample with a secondary `.wav` file from SD.                                          |
+| [`haas.c`](../editor-fx-sdk/effects/haas.c)                         | `Haas Effect`        | `EFFECT \| STEREO`          | `8,820 B`   | `Delay` (`1–100 ms`, default `10 ms`), `Chan` (List: `Left\|Right`). Psychoacoustic stereo Haas widener delaying L or R channel with appended tail fade-out.                                                                                                    |
+| [`multimode_filter.c`](../editor-fx-sdk/effects/multimode_filter.c) | `Multi-Mode Filter`  | `EFFECT \| STEREO`          | `0 B`       | `Mode` (List: `LPF 24dB\|LPF 12dB\|BPF 12dB\|HPF 12dB\|Notch\|Peak`), `Cutoff` (`40–16000 Hz`), `Reso` (`0–95 %`), `Drive` (List: `Clean\|SoftSat\|WarmTube\|HardClip\|Foldback`). Zero-delay feedback Cytomic SVF filter.                                      |
+| [`speech_gen.c`](../editor-fx-sdk/effects/speech_gen.c)             | `Speech Gen`         | `GENERATOR`                 | `16,384 B`  | `Text` (`PARAM_TEXT`), `Voice` (`Male\|Female`), `Mode` (`Natural\|Robot\|Whisper`), `Pitch` (`65–320 Hz`), `Speed` (`40–400 WPM`), `Mouth` (`50–200 %`), `Throat` (`50–200 %`), `Grime` (`Clean\|Amiga 8b\|Lo-Fi`). Formant speech synthesizer (Amiga homage). |
+| [`stereo_delay.c`](../editor-fx-sdk/effects/stereo_delay.c)         | `Stereo Delay`       | `EFFECT \| STEREO`          | `176,404 B` | `Time` (`10–1000 ms`), `Fdbk` (`0–95 %`), `Mix` (`0–100 %`), `Tail` (List: `Ring Out\|Cut Off`). Stereo delay line with optional tail ring-out.                                                                                                                 |
+| [`stereo_to_mono.c`](../editor-fx-sdk/effects/stereo_to_mono.c)     | `Stereo to Mono`     | `STEREO \| CONVERT_TO_MONO` | `0 B`       | `Source` (List: `Merge L+R\|Left Only\|Right Only\|Side L-R`), `Gain` (`-12.0 to +6.0 dB`). Converts a stereo sample into a true mono sample, reclaiming 50% sample RAM.                                                                     |
 
 ---
 
@@ -203,9 +205,9 @@ int32_t plugin_process_block(const int16_t** in, int16_t** out, uint32_t samples
 | :--- | :--- | :--- |
 | `EFFECT` | `PTFX_FLAG_EFFECT` (`0x0000`) | Standard audio effect transforming `in` to `out` across the selected sample range (plus optional prepended/appended samples via `set_extra_samples`). Disabled on empty sample slots. |
 | `GENERATOR` | `PTFX_FLAG_GENERATOR` (`0x0001`) | Audio generator/synthesizer. Can run on empty instrument slots (`in` is `NULL`), produces up to `88,200` samples (`2.0 s`, or stops early if `plugin_process_block` returns `<= 0`), activates inactive instruments upon apply, and names them `"Gen XX"`. |
-| `STEREO` | `PTFX_FLAG_STEREO` (`0x0002`) | Processes independent Left/Right channels when `channels == 2` on Tracker+ / Tracker Mini. On Original Tracker (`MK66`), `channels` is always `1`. |
+| `STEREO` | `PTFX_FLAG_STEREO` (`0x0002`) | Processes independent Left/Right channels (`channels == 2` across all platforms). If a mono sample produces different L/R output, the Sample Editor automatically upgrades it to stereo. |
 | `WAVETABLE` | `PTFX_FLAG_WAVETABLE` (`0x0004`) | Automatically sets `instrument.playMode = playModeWavetable` when committed. |
-| `CONVERT_TO_MONO` | `PTFX_FLAG_CONVERT_TO_MONO` (`0x0008`) | Signals `cSampleEditor::isCurrentSampleStereo()` on IMX platforms to export only the Left channel (`memoryAddressR = memoryAddressL`) when saving back to project sample memory, reclaiming 50% sample RAM. |
+| `CONVERT_TO_MONO` | `PTFX_FLAG_CONVERT_TO_MONO` (`0x0008`) | Signals `cSampleEditor::isCurrentSampleStereo()` to export only the Left channel (`memoryAddressR = memoryAddressL`) when saving back to project sample memory, reclaiming 50% sample RAM. |
 | `IMX_ONLY` | `PTFX_FLAG_IMX_ONLY` (`0x0010`) | Requires Cortex-M7 speeds or `> 32 KB` code/BSS size; blocked from executing on Original Tracker (`MK66`). |
 
 ---
@@ -262,6 +264,14 @@ PTFX_PARAM_SAVE_FILE("Export", ".dat")
 - **UI display & controls**: The bottom button displays `"Select..."` (`PARAM_FILE`) or `"Save..."` (`PARAM_SAVE_FILE`), and once a file is chosen, its filename is rendered vertically inside the parameter column above the button (with no slider bar). A single press on the parameter's screen button (or `Insert` when selected) opens `GlobalFileBrowser` without disturbing the plugin's scratch or secondary sample buffers (`[0 .. 744 KB]`), and pressing `Delete` clears the selected file path.
 - **Notification inside the plugin**: When the user confirms a file, the firmware stores the selected path per parameter index (`0..11`), restores the effect UI, sets the parameter's float value to `1.0f` (`0.0f` if loading a `.wav` failed), and calls `plugin_set_param(index, value)`. Query the path via `host->get_selected_file_path(index)` and read WAV frames via `host->get_secondary_sample(&frames, &channels)` or raw bytes via `host->read_file()` / `host->write_file()`.
 
+#### 5. Editable Text Parameter (`PTFX_PARAM_TEXT`)
+```c
+PTFX_PARAM_TEXT("Text", "HELLO TRACKER")
+```
+- Opens Tracker's native on-screen QWERTY keyboard (`mtKeyboardManager`, up to **64 characters**) when the user presses the parameter's screen button or `Insert`.
+- Renders the current text vertically in the parameter column with `"Edit..."` in the bottom button; pressing `Delete` resets to the default text packed into `.ptfx_strings`.
+- Read the current text inside the plugin via `host->get_text_param(index)`. Saved and restored automatically in `.ptp` presets.
+
 ---
 
 ## 6. Host API Reference (`PtfxHostApi`)
@@ -298,14 +308,16 @@ typedef struct {
     int32_t        (*write_file)(const char* path, const void* buffer, uint32_t num_bytes);
     const int16_t* (*get_secondary_sample)(uint32_t* out_frames, uint8_t* out_channels);
     const char*    (*get_selected_file_path)(uint8_t param_index);
+    const char*    (*get_text_param)(uint8_t param_index);
 } PtfxHostApi;
 ```
 
-#### File I/O & Secondary Sample Callbacks
+#### File I/O, Text & Secondary Sample Callbacks
 * **`read_file(path, buffer, max_bytes)`**: Opens an SD file via FatFs in chunked `256`-byte reads (`<= max_bytes`), closes the handle, and returns total bytes read (or `-1` on error). Never call from real-time playback interrupts — call inside `plugin_init()` or `plugin_set_param()`.
 * **`write_file(path, buffer, num_bytes)`**: Overwrites or creates an SD file in `256`-byte chunks, closes the handle, and returns total bytes written (or `-1` on error).
 * **`get_secondary_sample(&out_frames, &out_channels)`**: Returns a pointer to the pre-decoded interleaved 16-bit PCM WAV data residing in `[512 KB .. 744 KB]` (`232 KB` capacity, ~`118k` total `int16_t` samples, supporting mono/stereo 8/16/24/32-bit PCM and 32-bit float sources). Sets `*out_frames` and `*out_channels` (`1` or `2`; returns `NULL` when empty). Index stereo samples as `sec[frame * channels + ch]`.
 * **`get_selected_file_path(param_index)`**: Returns the null-terminated SD path currently assigned to parameter `param_index` (`0..11`), or `""` if none is selected. Path strings persist across parameter edits, browser round-trips, and preset loads until cleared or changed.
+* **`get_text_param(param_index)`**: Returns the null-terminated text string (up to `64` chars) currently assigned to a `PTFX_PARAM_TEXT` parameter `param_index` (`0..11`), seeded with its default text on load and updated whenever confirmed in the on-screen keyboard or restored from a `.ptp` preset.
 
 ### Helper Macro: 16-Bit Signed Saturation (`SATURATE_16BIT`)
 [`editor-fx-sdk/tracker_plugin.h`](../editor-fx-sdk/tracker_plugin.h) provides `SATURATE_16BIT(x)`, which compiles to a single-cycle hardware `SSAT` instruction on ARM Cortex-M4/M7:
@@ -364,7 +376,7 @@ Generators synthesize audio from scratch (`in` is `NULL`) and can run even when 
 - Maximum generation window is `88,200` samples (`2.0 seconds` at `44.1 kHz`).
 - To generate a shorter sample (such as a `300 ms` drum hit or a single-cycle oscillator waveform of `689` samples), stop generating once your target sample count is reached and return `0` on the next call (or return the exact remaining sample count `< samples` and `0` thereafter).
 - When `plugin_process_block()` finishes early, the firmware automatically trims `processed[ch].selection.length` and `processed[ch].area.length` to the exact number of samples generated.
-- Write identical samples to all `channels` (`for (uint8_t c = 0; c < channels; c++) out[c][i] = pcm;`) so stereo instruments on Tracker+ / Tracker Mini receive both Left and Right channels.
+- Write identical samples to all `channels` (`for (uint8_t c = 0; c < channels; c++) out[c][i] = pcm;`) so stereo instruments receive both Left and Right channels.
 - See [`editor-fx-sdk/effects/analog_kick_gen.c`](../editor-fx-sdk/effects/analog_kick_gen.c) and [`editor-fx-sdk/effects/chiptune_gen.c`](../editor-fx-sdk/effects/chiptune_gen.c).
 
 ### 7.5 Pattern D: Using Working Scratch RAM (`PTFX_SCRATCH`)
@@ -493,8 +505,8 @@ All `float` fields in `PtfxParamDef` are strictly 4-byte aligned so Cortex-M4/M7
 | `+0x0C` | `float` | `max_val` | Maximum knob value (`item_count - 1` for `PARAM_LIST`) |
 | `+0x10` | `float` | `default_val` | Default initial knob value / default list index |
 | `+0x14` | `float` | `step` | Value change per encoder step (`1.0f` for `PARAM_LIST`) |
-| `+0x18` | `char[6]` | `unit` | Unit suffix string (`" ms"`, `" dB"`, `" %"`), 5-char truncated file extension filter (`".wav"`, `".ir"`) for `PARAM_FILE`/`PARAM_SAVE_FILE`, or for `PARAM_LIST`: `uint16_t list_offset` (`+0x18..+0x19`) + `uint8_t item_count` (`+0x1A`) pointing to `.ptfx_strings` in the code payload |
-| `+0x1E` | `uint8_t` | `display_type` | `'f'` (`PARAM_FLOAT`), `'d'` (`PARAM_INT`), `'l'` (`PARAM_LIST`), `'w'` (`PARAM_FILE`), or `'s'` (`PARAM_SAVE_FILE`) |
+| `+0x18` | `char[6]` | `unit` | Unit suffix string (`" ms"`, `" dB"`, `" %"`), 5-char truncated file extension filter (`".wav"`, `".ir"`) for `PARAM_FILE`/`PARAM_SAVE_FILE`, for `PARAM_LIST`: `uint16_t list_offset` (`+0x18..+0x19`) + `uint8_t item_count` (`+0x1A`), or for `PARAM_TEXT`: `uint16_t default_text_offset` (`+0x18..+0x19`) + `uint8_t max_len` (`+0x1A`, `1..64`, `0` = `64`) pointing to `.ptfx_strings` in the code payload |
+| `+0x1E` | `uint8_t` | `display_type` | `'f'` (`PARAM_FLOAT`), `'d'` (`PARAM_INT`), `'l'` (`PARAM_LIST`), `'w'` (`PARAM_FILE`), `'s'` (`PARAM_SAVE_FILE`), or `'t'` (`PARAM_TEXT`) |
 | `+0x1F` | `uint8_t` | `padding` | Struct padding to 32 bytes |
 
 ---
@@ -611,7 +623,7 @@ Any `.ptfx` plugin declaring at least one parameter (`num_params >= 1`) automati
 * **Reset** restores every parameter to its descriptor's `default_val` and clears any selected file paths.
 
 ### `.ptp` Binary Format (`PtfxPresetFileHeader`)
-Preset files store both numeric/list parameter values and all `PTFX_PARAM_FILE` / `PTFX_PARAM_SAVE_FILE` SD paths:
+Preset files store numeric/list parameter values as well as all `PTFX_PARAM_FILE`, `PTFX_PARAM_SAVE_FILE`, and `PTFX_PARAM_TEXT` strings:
 
 ```text
 +-----------------------------------------------------------------------+

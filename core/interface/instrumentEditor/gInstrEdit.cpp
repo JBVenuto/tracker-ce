@@ -721,11 +721,10 @@ void cInstrumentEditor::showEffectScreen()
     display.setControlText(label[4], "Instrument");
     display.setControlText2(label[4], "MIDI Mapping");
 
-    for (uint8_t i = 5; i < 7; i++)
-    {
-        display.setControlText(label[i], "");
-        display.setControlText2(label[i], "");
-    }
+    display.setControlText(label[5], "");
+    display.setControlText2(label[5], "");
+    display.setControlText(label[6], "Save .pti");
+    display.setControlText2(label[6], "");
     display.setControlText(label[7], "Back");
     display.setControlText2(label[7], "");
 
@@ -760,6 +759,13 @@ void cInstrumentEditor::showEffectScreen()
     display.setControlStyle2(label[4],
                              controlStyleCenterX | controlStyleCenterY | controlStyleFont3);
     display.setControlColors(label[4], display.getTheme().activeButtonLabelsColors);
+
+    const bool canSavePti = (editorInstrument != nullptr && editorInstrument->isActive &&
+                             editorInstrument->sample.length > 0);
+    display.setControlColors(label[6],
+                             canSavePti ? display.getTheme().activeButtonLabelsColors
+                                        : display.getTheme().inactiveButtonLabelsColors);
+    display.refreshControl(label[6]);
 
     display.setControlValue(bgLabel, 255); // 0b10111111
     display.setControlShow(bgLabel);

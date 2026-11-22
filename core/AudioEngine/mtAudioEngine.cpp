@@ -1812,7 +1812,7 @@ AUDIO_CORE_RAM void playerEngine ::modDelaySend(uint8_t value)
     }
     else if (mtProject.values.sendsMode == sendsModePostFader)
     {
-        bool isMute = (mtProject.values.delayMute || mtProject.values.trackMute[nChannel]);
+        bool isMute = (mtProject.values.delayMute || isSampleTrackMutedOrHidden(nChannel));
         float gainFromDelay =
           sendsAmpLogValues[value] * mixAmpLogValues[mtProject.values.delayVolume];
         float gainFromVolume = getMostSignificantAmount() *
@@ -1853,7 +1853,7 @@ AUDIO_CORE_RAM void playerEngine ::modReverbSend(uint8_t value)
     }
     else if (mtProject.values.sendsMode == sendsModePostFader)
     {
-        bool isMute = (mtProject.values.reverbMute || mtProject.values.trackMute[nChannel]);
+        bool isMute = (mtProject.values.reverbMute || isSampleTrackMutedOrHidden(nChannel));
         float gainFromReverb =
           sendsAmpLogValues[value] * mixAmpLogValues[mtProject.values.reverbVolume];
         float gainFromVolume = getMostSignificantAmount() *
@@ -2190,14 +2190,14 @@ void audioEngine::soloTrack(uint8_t channel, uint8_t state)
         {
             if (i == channel)
             {
-                if (!mtProject.values.trackMute[i])
+                if (!isSampleTrackMutedOrHidden(i))
                 {
                     muteDelaySend(i, 1);
                     muteReverbSend(i, 1);
                 }
                 continue;
             }
-            if (!mtProject.values.trackMute[i])
+            if (!isSampleTrackMutedOrHidden(i))
                 muteTrack(i, 1);
         }
     }
@@ -2211,7 +2211,7 @@ void audioEngine::soloTrack(uint8_t channel, uint8_t state)
                 muteReverbSend(i, 0);
                 continue;
             }
-            if (!mtProject.values.trackMute[i])
+            if (!isSampleTrackMutedOrHidden(i))
                 muteTrack(i, 0);
         }
     }
@@ -2225,7 +2225,7 @@ void audioEngine::soloDelaySend(uint8_t state)
         forceDelaySend = 1;
         for (uint8_t i = 0; i < 8; i++)
         {
-            if (!mtProject.values.trackMute[i])
+            if (!isSampleTrackMutedOrHidden(i))
                 muteTrack(i, 1);
         }
     }
@@ -2234,7 +2234,7 @@ void audioEngine::soloDelaySend(uint8_t state)
         forceDelaySend = 0;
         for (uint8_t i = 0; i < 8; i++)
         {
-            if (!mtProject.values.trackMute[i])
+            if (!isSampleTrackMutedOrHidden(i))
                 muteTrack(i, 0);
         }
     }
@@ -2247,7 +2247,7 @@ void audioEngine::soloReverbSend(uint8_t state)
         forceReverbSend = 1;
         for (uint8_t i = 0; i < 8; i++)
         {
-            if (!mtProject.values.trackMute[i])
+            if (!isSampleTrackMutedOrHidden(i))
                 muteTrack(i, 1);
         }
     }
@@ -2256,7 +2256,7 @@ void audioEngine::soloReverbSend(uint8_t state)
         forceReverbSend = 0;
         for (uint8_t i = 0; i < 8; i++)
         {
-            if (!mtProject.values.trackMute[i])
+            if (!isSampleTrackMutedOrHidden(i))
                 muteTrack(i, 0);
         }
     }

@@ -1619,7 +1619,8 @@ void Sequencer::pasteSelectionFromBuffer(strSelection* from, strSelection* to, u
 
             // czy step istnieje?
             if (srcStepIdx <= MAXSTEP && srcTrackIdx < kAllTracks && destStepIdx <= MAXSTEP &&
-                destTrackIdx < kAllTracks && destStepIdx <= currentPattern->track[0].length)
+                destTrackIdx < getProjectMaxTracks() &&
+                destStepIdx <= currentPattern->track[0].length)
             {
                 Sequencer::strPattern::strTrack::strStep *srcStep, *destStep;
 
@@ -2109,6 +2110,10 @@ AUDIO_CORE_RAM uint8_t Sequencer::calcStepLength(uint8_t track, uint8_t step)
 
 AUDIO_CORE_RAM uint8_t Sequencer::isTrackEngineMuted(uint8_t track)
 {
+    if (track >= getProjectMaxTracks())
+    {
+        return 1;
+    }
     return isSampleTrack(track) ? mtProject.values.trackMute[track]
                                 : mtProject.values.midiTrackMute[track % 8];
 }

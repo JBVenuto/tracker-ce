@@ -62,6 +62,8 @@ void cFileManager::updateExportModFile()
 
 uint8_t cFileManager::exportItFile()
 {
+    stopAutosave();
+
     if (status != fmIdle && status != fmSavingProjectToWorkspace)
         return false;
     if (currentOperation != fmNoOperation && currentOperation != fmSaveWorkspaceProject)
@@ -1444,9 +1446,10 @@ void cFileManager::exportItFile_ProcessPatterns()
 
     uint16_t length = 0;
 
+    const uint8_t maxTracks = getProjectMaxTracks();
     for (uint8_t stepIdx = 0; stepIdx <= patt->track[0].length; stepIdx++)
     {
-        for (uint8_t tr = 0; tr < kAllTracks; tr++)
+        for (uint8_t tr = 0; tr < maxTracks; tr++)
         {
             Sequencer::strPattern::strTrack::strStep* step = &patt->track[tr].step[stepIdx];
 
@@ -1557,7 +1560,7 @@ void cFileManager::exportItFile_ProcessPatterns()
                 }
             }
 
-            if (tr == kAllTracks - 1)
+            if (tr == maxTracks - 1)
             {
                 uint8_t tempZero = 0;
                 fileSystem->writeFile(&tempZero, sizeof(tempZero), exportedFile); // END OF ROW

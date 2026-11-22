@@ -13,8 +13,15 @@
 #define MAX_BLOCKS_VISIBLE   32
 #define MAX_PATTERNS_VISIBLE 12
 
-constexpr uint16_t blockWidth =
-  ((TOTAL_BLOCKS_WIDTH - BLOCKS_MARGIN * 2) - ((kAllTracks - 1) * BLOCK_SPACING)) / kAllTracks;
+static uint16_t calcBlockWidth(int allTracksCount)
+{
+    if (allTracksCount <= 0)
+    {
+        return 0;
+    }
+    return ((TOTAL_BLOCKS_WIDTH - BLOCKS_MARGIN * 2) - ((allTracksCount - 1) * BLOCK_SPACING)) /
+           allTracksCount;
+}
 //--------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------
@@ -616,6 +623,11 @@ void cSongPlayer::drawIcon(int pos, int row, int x, int y, int h)
 void cSongPlayer::drawTrackNames()
 {
     const int allTracksCount = controlData->normalTracksCount + controlData->midiTracksCount;
+    if (allTracksCount <= 0)
+    {
+        return;
+    }
+    const uint16_t blockWidth = calcBlockWidth(allTracksCount);
 
     for (int track = 0; track < allTracksCount; track++)
     {
@@ -703,6 +715,13 @@ void cSongPlayer::drawTrackNames()
 
 void cSongPlayer::fillBlocks()
 {
+    const int allTracksCount = controlData->normalTracksCount + controlData->midiTracksCount;
+    if (allTracksCount <= 0)
+    {
+        return;
+    }
+    const uint16_t blockWidth = calcBlockWidth(allTracksCount);
+
     API_LINE_WIDTH(kRedFrameWidth);
     API_BEGIN(RECTS);
 
@@ -711,7 +730,6 @@ void cSongPlayer::fillBlocks()
     maxPatternsVisible = std::min(maxPatternsVisible, MAX_PATTERNS_VISIBLE);
 
     selectionCalcInit = 0;
-    const int allTracksCount = controlData->normalTracksCount + controlData->midiTracksCount;
 
     for (int pattern = 0; pattern < maxPatternsVisible; pattern++)
     {
@@ -758,6 +776,13 @@ void cSongPlayer::fillBlocks()
 
 void cSongPlayer::drawProgressLine()
 {
+    const int allTracksCount = controlData->normalTracksCount + controlData->midiTracksCount;
+    if (allTracksCount <= 0)
+    {
+        return;
+    }
+    const uint16_t blockWidth = calcBlockWidth(allTracksCount);
+
     if (controlData->progress.isPlaying)
     {
         API_BLEND_FUNC(SRC_ALPHA, ZERO);
@@ -785,9 +810,9 @@ void cSongPlayer::drawProgressLine()
 
             uint16_t localX, localY, localWidth;
             localX = posX + BLOCKS_MARGIN;
-            localWidth = (blockWidth + BLOCK_SPACING) * kAllTracks - BLOCK_SPACING;
+            localWidth = (blockWidth + BLOCK_SPACING) * allTracksCount - BLOCK_SPACING;
 
-            if (controlData->progress.trackPreview < 8)
+            if (controlData->progress.trackPreview < allTracksCount)
             {
                 localX += controlData->progress.trackPreview * (blockWidth + BLOCK_SPACING);
                 localWidth = blockWidth;

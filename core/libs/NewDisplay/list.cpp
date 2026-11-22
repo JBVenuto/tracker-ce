@@ -111,6 +111,7 @@ void cList::setData(void* data)
     if (data == nullptr)
         return;
     list = (strList*)data;
+    listAnimationStep = 0;
 
     if (list->start < 0)
     {

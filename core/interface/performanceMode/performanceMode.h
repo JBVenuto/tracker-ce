@@ -74,7 +74,7 @@ class cPerformanceMode : public ModuleBase
 
     bool isButtonActiveOnCurrentPage(uint8_t button) const
     {
-        return getTrackForButton(button) < kPerformanceTracks;
+        return getTrackForButton(button) < getProjectMaxTracks();
     }
 
     //----------------------------------
@@ -85,6 +85,7 @@ class cPerformanceMode : public ModuleBase
     void lightUpPadBoard();
     bool turnOff();
     void turnOffAtEndOfPattern();
+    void onMaxTracksChanged(uint8_t maxTracks);
     bool canPerformanceModeContinueAfterSwitchingTo(uint8_t button);
 
     void toggleTrackPerformanceState(uint8_t track);

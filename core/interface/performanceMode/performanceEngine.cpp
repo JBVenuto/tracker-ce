@@ -145,6 +145,11 @@ void cPerformEngine::loadSelectedValuesToTempValues()
 
 void cPerformEngine::toggleTrackState(uint8_t track)
 {
+    if (track >= getProjectMaxTracks())
+    {
+        return;
+    }
+
     tracksPerformanceState[track] = !tracksPerformanceState[track];
 
     if (tracksPerformanceState[track] == 0)
@@ -157,6 +162,21 @@ void cPerformEngine::toggleTrackState(uint8_t track)
     else
     {
         loadAllSlotsFxOnTrack(track);
+    }
+}
+
+void cPerformEngine::disarmHiddenTracks(uint8_t maxTracks)
+{
+    for (uint8_t track = maxTracks; track < kPerformanceTracks; track++)
+    {
+        if (tracksPerformanceState[track] != 0)
+        {
+            tracksPerformanceState[track] = 0;
+            for (uint8_t fx = 0; fx < fxCount; fx++)
+            {
+                resetFxOnTrack(fx, track);
+            }
+        }
     }
 }
 
@@ -395,7 +415,8 @@ void cPerformEngine::loadSlotFxValues(uint8_t slot)
     }
     else
     {
-        for (uint8_t track = 0; track < kPerformanceTracks; track++)
+        const uint8_t maxTracks = getProjectMaxTracks();
+        for (uint8_t track = 0; track < maxTracks; track++)
         {
             if (tracksPerformanceState[track] == 1)
             {
@@ -429,7 +450,8 @@ void cPerformEngine::loadCCValuesOnAffectedTracks(uint8_t slot)
     }
     else
     {
-        for (uint8_t track = 0; track < kPerformanceTracks; track++)
+        const uint8_t maxTracks = getProjectMaxTracks();
+        for (uint8_t track = 0; track < maxTracks; track++)
         {
             if (tracksPerformanceState[track] == 1)
             {
@@ -526,7 +548,8 @@ void cPerformEngine::changeSlotFxValue(uint8_t slot, int16_t value)
     else
     {
         // przeladowanie efektu z nowa wartoscia
-        for (uint8_t track = 0; track < kPerformanceTracks; track++)
+        const uint8_t maxTracks = getProjectMaxTracks();
+        for (uint8_t track = 0; track < maxTracks; track++)
         {
             if (tracksPerformanceState[track])
                 loadFxValuesOnTrack(slot, track);

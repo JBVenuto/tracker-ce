@@ -70,6 +70,10 @@ class cMasterParams : public ModuleBase
     void showLimiterThreshold();
     void showLimiterGainReduce();
     void showLimiterSidechain();
+    void rebuildLimiterSidechainList();
+    uint8_t getEffectiveLimiterSidechain() const;
+    uint8_t getLimiterSidechainVisibleIdx(uint8_t sidechainVal) const;
+    void onMaxTracksChanged(uint8_t maxTracks);
     // EQ
     void showEqualizerScreen();
     void showEqualizerBand(uint8_t n);
@@ -362,6 +366,11 @@ class cMasterParams : public ModuleBase
                                                       (char*)"Line in R" };
 
 #endif
+
+    static constexpr uint8_t kMaxLimiterSidechainItems = LIMITER_SIDECHAIN_MAX + 1;
+    const char* limiterSidechainVisibleTexts[kMaxLimiterSidechainItems] = {};
+    uint8_t limiterSidechainVisibleValues[kMaxLimiterSidechainItems] = {};
+    uint8_t limiterSidechainVisibleCount = kMaxLimiterSidechainItems;
 
     hControl label[8];
 #ifdef FEATURE_SYNTH

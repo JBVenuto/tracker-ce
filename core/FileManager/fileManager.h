@@ -433,6 +433,7 @@ class cFileManager
                         bool loadPtiOnly);
 
     uint8_t saveInstrument(uint8_t idx);
+    bool saveInstrumentToPtiFile(uint8_t idx, const char* destPath);
     void writeInstrumentToFileStruct(strInstrument* instrument, strInstrumentFile* instrumentFile);
 
     FileManagerOperation::SampleChannelMode getSampleMode()
