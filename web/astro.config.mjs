@@ -10,7 +10,4 @@ const homeRedirect = `${pagesBasePath.replace(/\/$/, '')}/` || '/';
 export default defineConfig({
 	site: pagesOrigin,
 	base,
-	redirects: {
-		'/Home': homeRedirect,
-	},
 });

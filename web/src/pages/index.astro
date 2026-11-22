@@ -1,10 +1,5 @@
 ---
-import { Content as HomeContent } from '../../../docs/Home.md';
-import Layout from '../layouts/Layout.astro';
+return Astro.redirect(`${import.meta.env.BASE_URL}Home`);
 ---
 
-<Layout>
-	<article>
-		<HomeContent />
-	</article>
-</Layout>
+<!-- TODO: Add landing page here and remove above redirect -->
