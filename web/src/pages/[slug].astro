@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 
 export function getStaticPaths() {
-    const docs = import.meta.glob('../../../docs/*.md', {
+    const docs = import.meta.glob('../../docs/*.md', {
         eager: true,
         import: 'Content',
     });

@@ -1,5 +1,6 @@
 ---
-return Astro.redirect(`${import.meta.env.BASE_URL}Home`);
+const baseUrl = import.meta.env.BASE_URL.replace(/\/+$/, '');
+return Astro.redirect(`${baseUrl}/Home`);
 ---
 
 <!-- TODO: Add landing page here and remove above redirect -->
